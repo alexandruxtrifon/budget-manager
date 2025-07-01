@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import {
@@ -137,39 +137,255 @@ const chartConfig = {
   }
 }
 
-export function ChartAreaInteractive() {
+// export function ChartAreaInteractive() {
+//   const isMobile = useIsMobile()
+//   const [timeRange, setTimeRange] = React.useState("90d")
+
+//   React.useEffect(() => {
+//     if (isMobile) {
+//       setTimeRange("7d")
+//     }
+//   }, [isMobile])
+
+//   const filteredData = chartData.filter((item) => {
+//     const date = new Date(item.date)
+//     const referenceDate = new Date("2024-06-30")
+//     let daysToSubtract = 90
+//     if (timeRange === "30d") {
+//       daysToSubtract = 30
+//     } else if (timeRange === "7d") {
+//       daysToSubtract = 7
+//     }
+//     const startDate = new Date(referenceDate)
+//     startDate.setDate(startDate.getDate() - daysToSubtract)
+//     return date >= startDate
+//   })
+
+//   return (
+//     <Card className="@container/card">
+//       <CardHeader>
+//         <CardTitle>Total Visitors</CardTitle>
+//         <CardDescription>
+//           <span className="hidden @[540px]/card:block">
+//             Total for the last 3 months
+//           </span>
+//           <span className="@[540px]/card:hidden">Last 3 months</span>
+//         </CardDescription>
+//         <CardAction>
+//           <ToggleGroup
+//             type="single"
+//             value={timeRange}
+//             onValueChange={setTimeRange}
+//             variant="outline"
+//             className="hidden *:data-[slot=toggle-group-item]:!px-4 @[767px]/card:flex">
+//             <ToggleGroupItem value="90d">Last 3 months</ToggleGroupItem>
+//             <ToggleGroupItem value="30d">Last 30 days</ToggleGroupItem>
+//             <ToggleGroupItem value="7d">Last 7 days</ToggleGroupItem>
+//           </ToggleGroup>
+//           <Select value={timeRange} onValueChange={setTimeRange}>
+//             <SelectTrigger
+//               className="flex w-40 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate @[767px]/card:hidden"
+//               size="sm"
+//               aria-label="Select a value">
+//               <SelectValue placeholder="Last 3 months" />
+//             </SelectTrigger>
+//             <SelectContent className="rounded-xl">
+//               <SelectItem value="90d" className="rounded-lg">
+//                 Last 3 months
+//               </SelectItem>
+//               <SelectItem value="30d" className="rounded-lg">
+//                 Last 30 days
+//               </SelectItem>
+//               <SelectItem value="7d" className="rounded-lg">
+//                 Last 7 days
+//               </SelectItem>
+//             </SelectContent>
+//           </Select>
+//         </CardAction>
+//       </CardHeader>
+//       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
+//         <ChartContainer config={chartConfig} className="aspect-auto h-[250px] w-full">
+//           <AreaChart data={filteredData}>
+//             <defs>
+//               <linearGradient id="fillDesktop" x1="0" y1="0" x2="0" y2="1">
+//                 <stop offset="5%" stopColor="var(--color-desktop)" stopOpacity={1.0} />
+//                 <stop offset="95%" stopColor="var(--color-desktop)" stopOpacity={0.1} />
+//               </linearGradient>
+//               <linearGradient id="fillMobile" x1="0" y1="0" x2="0" y2="1">
+//                 <stop offset="5%" stopColor="var(--color-mobile)" stopOpacity={0.8} />
+//                 <stop offset="95%" stopColor="var(--color-mobile)" stopOpacity={0.1} />
+//               </linearGradient>
+//             </defs>
+//             <CartesianGrid vertical={false} />
+//             <XAxis
+//               dataKey="date"
+//               tickLine={false}
+//               axisLine={false}
+//               tickMargin={8}
+//               minTickGap={32}
+//               tickFormatter={(value) => {
+//                 const date = new Date(value)
+//                 return date.toLocaleDateString("en-US", {
+//                   month: "short",
+//                   day: "numeric",
+//                 });
+//               }} />
+//             <ChartTooltip
+//               cursor={false}
+//               defaultIndex={isMobile ? -1 : 10}
+//               content={
+//                 <ChartTooltipContent
+//                   labelFormatter={(value) => {
+//                     return new Date(value).toLocaleDateString("en-US", {
+//                       month: "short",
+//                       day: "numeric",
+//                     });
+//                   }}
+//                   indicator="dot" />
+//               } />
+//             <Area
+//               dataKey="mobile"
+//               type="natural"
+//               fill="url(#fillMobile)"
+//               stroke="var(--color-mobile)"
+//               stackId="a" />
+//             <Area
+//               dataKey="desktop"
+//               type="natural"
+//               fill="url(#fillDesktop)"
+//               stroke="var(--color-desktop)"
+//               stackId="a" />
+//           </AreaChart>
+//         </ChartContainer>
+//       </CardContent>
+//     </Card>
+//   );
+// }
+
+export function ChartAreaInteractive({ transactions = [], currency = "EUR" }) {
   const isMobile = useIsMobile()
   const [timeRange, setTimeRange] = React.useState("90d")
 
+  const prepareChartData = React.useCallback(() => {
+    if (!transactions || transactions.length === 0) {
+      return [];
+    }
+
+    const transactionsByDate = {};
+
+    transactions.forEach(transaction => {
+      if (!transaction.transaction_date) return;
+
+      const date = transaction.transaction_date.split('T')[0];
+      
+      if (!transactionsByDate[date]) {
+        transactionsByDate[date] = { income: 0, expense: 0 };
+      }
+      
+      const amount = parseFloat(transaction.amount || 0);
+      if (transaction.transaction_type === 'income') {
+        transactionsByDate[date].income += amount;
+      } else if (transaction.transaction_type === 'expense') {
+        transactionsByDate[date].expense += amount;
+      }
+    });
+
+    return Object.entries(transactionsByDate)
+      .map(([date, values]) => ({
+        date,
+        income: values.income,
+        expense: values.expense,
+        balance: values.income - values.expense
+      }))
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+  }, [transactions]);
+
+  const chartData = React.useMemo(() => prepareChartData(), [prepareChartData]);
+
   React.useEffect(() => {
     if (isMobile) {
-      setTimeRange("7d")
+      setTimeRange("7d");
     }
-  }, [isMobile])
+  }, [isMobile]);
 
-  const filteredData = chartData.filter((item) => {
-    const date = new Date(item.date)
-    const referenceDate = new Date("2024-06-30")
-    let daysToSubtract = 90
+  const filteredData = React.useMemo(() => {
+    if (!chartData.length) return [];
+    
+    const currentDate = new Date();
+    let daysToSubtract = 90;
+    
     if (timeRange === "30d") {
-      daysToSubtract = 30
+      daysToSubtract = 30;
     } else if (timeRange === "7d") {
-      daysToSubtract = 7
+      daysToSubtract = 7;
     }
-    const startDate = new Date(referenceDate)
-    startDate.setDate(startDate.getDate() - daysToSubtract)
-    return date >= startDate
-  })
+    
+    const startDate = new Date();
+    startDate.setDate(currentDate.getDate() - daysToSubtract);
+    
+    return chartData.filter(item => {
+      const date = new Date(item.date);
+      return date >= startDate;
+    });
+  }, [chartData, timeRange]);
 
+  const totals = React.useMemo(() => {
+    if (!filteredData.length) return { income: 0, expense: 0, balance: 0 };
+    
+    return filteredData.reduce((acc, item) => ({
+      income: acc.income + item.income,
+      expense: acc.expense + item.expense,
+      balance: acc.balance + item.income - item.expense
+    }), { income: 0, expense: 0, balance: 0 });
+  }, [filteredData]);
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency
+    }).format(amount);
+  };
+
+  const chartConfig = {
+    income: {
+      label: "Income",
+      color: "var(--green-9)",
+    },
+    expense: {
+      label: "Expenses",
+      color: "var(--red-9)",
+    },
+    balance: {
+      label: "Balance",
+      color: "var(--blue-9)",
+    }
+  };
+
+  if (chartData.length === 0) {
+    return (
+      <Card className="@container/card">
+        <CardHeader>
+          <CardTitle>Income vs Expenses</CardTitle>
+          <CardDescription>No transaction data available</CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center h-[250px]">
+          <p className="text-muted-foreground">Import transactions to see your financial chart</p>
+        </CardContent>
+      </Card>
+    );
+  }
+  
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>Total Visitors</CardTitle>
+        <CardTitle>Income vs Expenses</CardTitle>
         <CardDescription>
           <span className="hidden @[540px]/card:block">
-            Total for the last 3 months
+            Balance: {formatCurrency(totals.balance)}
           </span>
-          <span className="@[540px]/card:hidden">Last 3 months</span>
+          <span className="@[540px]/card:hidden">
+            {timeRange === "7d" ? "Last week" : timeRange === "30d" ? "Last month" : "Last 3 months"}
+          </span>
         </CardDescription>
         <CardAction>
           <ToggleGroup
@@ -207,13 +423,13 @@ export function ChartAreaInteractive() {
         <ChartContainer config={chartConfig} className="aspect-auto h-[250px] w-full">
           <AreaChart data={filteredData}>
             <defs>
-              <linearGradient id="fillDesktop" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--color-desktop)" stopOpacity={1.0} />
-                <stop offset="95%" stopColor="var(--color-desktop)" stopOpacity={0.1} />
+              <linearGradient id="fillIncome" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="var(--green-9)" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="var(--green-9)" stopOpacity={0.1} />
               </linearGradient>
-              <linearGradient id="fillMobile" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--color-mobile)" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="var(--color-mobile)" stopOpacity={0.1} />
+              <linearGradient id="fillExpense" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="var(--red-9)" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="var(--red-9)" stopOpacity={0.1} />
               </linearGradient>
             </defs>
             <CartesianGrid vertical={false} />
@@ -224,39 +440,73 @@ export function ChartAreaInteractive() {
               tickMargin={8}
               minTickGap={32}
               tickFormatter={(value) => {
-                const date = new Date(value)
+                const date = new Date(value);
                 return date.toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
                 });
               }} />
+            <YAxis 
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              tickFormatter={(value) => {
+                return new Intl.NumberFormat('en-US', {
+                  style: 'currency',
+                  currency: currency,
+                  notation: 'compact',
+                  maximumFractionDigits: 1
+                }).format(value);
+              }}
+            />
             <ChartTooltip
               cursor={false}
-              defaultIndex={isMobile ? -1 : 10}
               content={
                 <ChartTooltipContent
                   labelFormatter={(value) => {
                     return new Date(value).toLocaleDateString("en-US", {
+                      weekday: "short",
                       month: "short",
                       day: "numeric",
                     });
                   }}
+                  valueFormatter={(value) => formatCurrency(value)}
                   indicator="dot" />
               } />
             <Area
-              dataKey="mobile"
-              type="natural"
-              fill="url(#fillMobile)"
-              stroke="var(--color-mobile)"
-              stackId="a" />
+              dataKey="income"
+              type="monotone"
+              fill="url(#fillIncome)"
+              stroke="var(--green-9)"
+              strokeWidth={2}
+              fillOpacity={0.2}
+            />
             <Area
-              dataKey="desktop"
-              type="natural"
-              fill="url(#fillDesktop)"
-              stroke="var(--color-desktop)"
-              stackId="a" />
+              dataKey="expense"
+              type="monotone"
+              fill="url(#fillExpense)"
+              stroke="var(--red-9)"
+              strokeWidth={2}
+              fillOpacity={0.2}
+            />
           </AreaChart>
         </ChartContainer>
+        <div className="flex justify-between mt-4 text-sm">
+          <div>
+            <div className="text-muted-foreground">Income</div>
+            <div className="font-medium text-green-600">{formatCurrency(totals.income)}</div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">Expenses</div>
+            <div className="font-medium text-red-600">{formatCurrency(totals.expense)}</div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">Balance</div>
+            <div className={`font-medium ${totals.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {formatCurrency(totals.balance)}
+            </div>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

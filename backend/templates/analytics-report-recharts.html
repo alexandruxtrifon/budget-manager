@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics Report</title>
+  <script src="https://cdn.jsdelivr.net/npm/react@17.0.2/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@17.0.2/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/recharts@3.0.2/umd/Recharts.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #ddd;
+    }
+    .report-title {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .report-subtitle {
+      font-size: 16px;
+      color: #666;
+    }
+    .summary-section {
+      margin-bottom: 30px;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .summary-card {
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 15px;
+      background-color: #f9f9f9;
+    }
+    .card-label {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 5px;
+    }
+    .card-value {
+      font-size: 20px;
+      font-weight: bold;
+    }
+    .income { color: #4ade80; }
+    .expense { color: #f87171; }
+    .chart-section {
+      margin-bottom: 30px;
+    }
+    .chart-title {
+      font-size: 18px;
+      margin-bottom: 10px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid #eee;
+    }
+    .chart-container {
+      height: 300px;
+      margin-bottom: 30px;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      padding-top: 10px;
+      border-top: 1px solid #ddd;
+      font-size: 12px;
+      color: #999;
+    }
+    .page-break {
+      page-break-after: always;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="report-title">Analytics Report</div>
+    <div class="report-subtitle">{{accountName}} - {{timeframe}} Time Period</div>
+    <div class="report-subtitle">{{startDate}} to {{endDate}}</div>
+    <div class="report-subtitle">Generated on {{date}} for {{userName}}</div>
+  </div>
+
+  <div class="summary-section">
+    <h2>Financial Summary</h2>
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="card-label">Total Income</div>
+        <div class="card-value income">{{summary.income}} {{currency}}</div>
+      </div>
+      <div class="summary-card">
+        <div class="card-label">Total Expenses</div>
+        <div class="card-value expense">{{summary.expenses}} {{currency}}</div>
+      </div>
+      <div class="summary-card">
+        <div class="card-label">Net Balance</div>
+        <div class="card-value">{{summary.netBalance}} {{currency}}</div>
+      </div>
+      <div class="summary-card">
+        <div class="card-label">Transaction Count</div>
+        <div class="card-value">{{summary.transactionCount}}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-section">
+    <h2 class="chart-title">Spending by Category</h2>
+    <div id="categoryChart" class="chart-container"></div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <div class="chart-section">
+    <h2 class="chart-title">Income vs Expenses Timeline</h2>
+    <div id="timelineChart" class="chart-container"></div>
+  </div>
+
+  <div class="chart-section">
+    <h2 class="chart-title">Monthly Comparison</h2>
+    <div id="monthlyChart" class="chart-container"></div>
+  </div>
+
+  <div class="footer">
+    <p>Budget Manager App | Confidential Financial Report</p>
+  </div>
+
+  <script>
+    const categoryData = JSON.parse('{{{categoryData}}}');
+    const timelineData = JSON.parse('{{{timelineData}}}');
+    const monthlyData = JSON.parse('{{{monthlyData}}}');
+    
+    const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+    
+    const formatCurrency = (value) => {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: '{{currency}}',
+        maximumFractionDigits: 0
+      }).format(value);
+    };
+
+    // Render charts after the page is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+      // Using Recharts to render the charts
+      const { BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area, LineChart, Line, 
+              XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = Recharts;
+      
+      if (categoryData.length > 0) {
+        const CategoryChart = React.createElement(
+          ResponsiveContainer, { width: '100%', height: '100%' },
+          React.createElement(PieChart, {},
+            React.createElement(Pie, {
+              data: categoryData,
+              cx: '50%',
+              cy: '50%',
+              outerRadius: 100,
+              fill: '#8884d8',
+              dataKey: 'value',
+              label: ({name, value}) => `${name}: ${formatCurrency(value)}`,
+            }, categoryData.map((entry, index) => 
+              React.createElement(Cell, {
+                key: `cell-${index}`,
+                fill: COLORS[index % COLORS.length]
+              })
+            ))
+          )
+        );
+        
+        ReactDOM.render(CategoryChart, document.getElementById('categoryChart'));
+      }
+      
+      if (timelineData.length > 0) {
+        const TimelineChart = React.createElement(
+          ResponsiveContainer, { width: '100%', height: '100%' },
+          React.createElement(AreaChart, { data: timelineData },
+            React.createElement(CartesianGrid, { strokeDasharray: '3 3' }),
+            React.createElement(XAxis, { dataKey: 'date' }),
+            React.createElement(YAxis),
+            React.createElement(Tooltip),
+            React.createElement(Legend),
+            React.createElement(Area, { 
+              type: 'monotone', 
+              dataKey: 'income', 
+              stroke: '#4ade80', 
+              fill: '#4ade80', 
+              fillOpacity: 0.3
+            }),
+            React.createElement(Area, { 
+              type: 'monotone', 
+              dataKey: 'expense', 
+              stroke: '#f87171', 
+              fill: '#f87171', 
+              fillOpacity: 0.3
+            })
+          )
+        );
+        
+        ReactDOM.render(TimelineChart, document.getElementById('timelineChart'));
+      }
+      
+      if (monthlyData.length > 0) {
+        const MonthlyChart = React.createElement(
+          ResponsiveContainer, { width: '100%', height: '100%' },
+          React.createElement(BarChart, { data: monthlyData },
+            React.createElement(CartesianGrid, { strokeDasharray: '3 3' }),
+            React.createElement(XAxis, { dataKey: 'month' }),
+            React.createElement(YAxis),
+            React.createElement(Tooltip),
+            React.createElement(Legend),
+            React.createElement(Bar, { 
+              dataKey: 'income', 
+              fill: '#4ade80', 
+              name: 'Income'
+            }),
+            React.createElement(Bar, { 
+              dataKey: 'expense', 
+              fill: '#f87171', 
+              name: 'Expense'
+            })
+          )
+        );
+        
+        ReactDOM.render(MonthlyChart, document.getElementById('monthlyChart'));
+      }
+    });
+  </script>
+</body>
+</html>

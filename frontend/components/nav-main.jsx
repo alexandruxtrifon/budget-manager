@@ -1,6 +1,6 @@
 "use client"
 
-import { IconCirclePlusFilled, IconMail } from "@tabler/icons-react";
+import { IconDashboard, IconCirclePlusFilled, IconMail, IconBuildingBank } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button"
 import {
@@ -10,41 +10,33 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export function NavMain({
-  items
+  items,
+  ...props
 }) {
+  const pathname = usePathname();
   return (
-    <SidebarGroup>
-      <SidebarGroupContent className="flex flex-col gap-2">
-        <SidebarMenu>
-          <SidebarMenuItem className="flex items-center gap-2">
-            <SidebarMenuButton
-              tooltip="Quick Create"
-              className="bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground min-w-8 duration-200 ease-linear">
-              <IconCirclePlusFilled />
-              <span>Quick Create</span>
+    <SidebarMenu {...props}>
+      {items.map((item) => {
+        const isActive = pathname === item.url;
+        
+        return (
+          <SidebarMenuItem key={item.title}>
+            <SidebarMenuButton 
+              asChild 
+              className={isActive ? "bg-accent text-accent-foreground" : ""}
+            >
+              <Link href={item.url}>
+                {item.icon && <item.icon className="mr-2 h-4 w-4" />}
+                <span className="font-medium">{item.title}</span>
+              </Link>
             </SidebarMenuButton>
-            <Button
-              size="icon"
-              className="size-8 group-data-[collapsible=icon]:opacity-0"
-              variant="outline">
-              <IconMail />
-              <span className="sr-only">Inbox</span>
-            </Button>
           </SidebarMenuItem>
-        </SidebarMenu>
-        <SidebarMenu>
-          {items.map((item) => (
-            <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton tooltip={item.title}>
-                {item.icon && <item.icon />}
-                <span>{item.title}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
-      </SidebarGroupContent>
-    </SidebarGroup>
+        );
+      })}
+    </SidebarMenu>
   );
 }

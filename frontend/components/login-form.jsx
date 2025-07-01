@@ -20,34 +20,18 @@ export function LoginForm() {
     e.preventDefault()
     toast("Attempting to log in...");
     //const res = await fetch("http://localhost:3001/api/users/login", {
-    const res = await fetch("http://localhost:3001/api/users/login", {
+    const res = await fetch("http://localhost:3001/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
     })
 
-    // if (res.ok) {
-    //   toast.success("Login successful");
-    //   router.push("/dashboard")
-    // } else {
-    //   const error = await res.text();
-    //   let errorMessage = "Login failed. Please try again.";
-
-    //   try {
-    //     const errorObject = JSON.parse(error);
-    //     if (errorObject && errorObject.error) {
-    //       errorMessage = errorObject.error;
-    //     }
-    //   } catch (parseError) {
-    //     console.error("Failed to parse error response as JSON:", parseError);
-    //   }
-    //   toast.error("Login failed", {description: errorMessage})
-    // }
         if (res.ok) {
       const data = await res.json(); // Expect { message, token, user }
       if (data.token) {
-        localStorage.setItem('token', data.token); // Store the token
+        localStorage.setItem('token', data.token); 
         // Optionally store user info: localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem('user', JSON.stringify(data.user));
         toast.success(data.message || "Login successful");
         router.push("/dashboard");
       } else {
@@ -63,7 +47,7 @@ export function LoginForm() {
         }
       } catch (parseError) {
         console.error("Failed to parse error response as JSON:", parseError);
-        if (errorText) errorMessage = errorText; // Use raw text if not JSON
+        if (errorText) errorMessage = errorText;
       }
       toast.error("Login Failed", { description: errorMessage });
     }

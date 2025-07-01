@@ -41,8 +41,8 @@ export function RegisterForm() {
           errorData = await res.text(); // Attempt to parse error response as JSON
           console.log("Backend error data:", errorData); // DEBUG
         } catch (parseError) {
-          console.error("Failed to parse error response as JSON:", parseError); // DEBUG
-          // If parsing fails, use the status text or a generic message
+          console.error("Failed to parse error response as JSON:", parseError); // DEBUG ONLY
+          // If parsing fails use the status text or a generic message
           errorData = { message: res.statusText || "An unexpected error occurred." };
         }
         const errorMessage = errorData || errorData.message || errorData.detail || "Please try again";
@@ -78,7 +78,7 @@ export function RegisterForm() {
         <div className="mt-4 text-center text-sm">
           Already have an account? <Link href="/login" className="underline">Login</Link>
         </div>
-                <div className="mt-4"> {/* Added a div for spacing */}
+                <div className="mt-4">
           <Button variant="outline" onClick={handleTestToast} className="w-full">
             Test Sonner Toast
           </Button>

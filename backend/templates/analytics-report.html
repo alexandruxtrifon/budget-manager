@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics Report</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #ddd;
+    }
+    .report-title {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .report-subtitle {
+      font-size: 16px;
+      color: #666;
+    }
+    .summary-section {
+      margin-bottom: 30px;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .summary-card {
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 15px;
+      background-color: #f9f9f9;
+    }
+    .card-label {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 5px;
+    }
+    .card-value {
+      font-size: 20px;
+      font-weight: bold;
+    }
+    .income { color: #4ade80; }
+    .expense { color: #f87171; }
+    .chart-section {
+      margin-bottom: 30px;
+    }
+    .chart-title {
+      font-size: 18px;
+      margin-bottom: 10px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid #eee;
+    }
+    .chart-container {
+      height: 300px;
+      margin-bottom: 30px;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      padding-top: 10px;
+      border-top: 1px solid #ddd;
+      font-size: 12px;
+      color: #999;
+    }
+    .page-break {
+      page-break-after: always;
+    }
+  </style>
+  <script>
+    {{{chartJsLib}}}
+  </script>
+</head>
+<body>
+  <div class="header">
+    <div class="report-title">Analytics Report</div>
+    <div class="report-subtitle">{{accountName}} - {{timeframe}} Time Period</div>
+    <div class="report-subtitle">{{startDate}} to {{endDate}}</div>
+    <div class="report-subtitle">Generated on {{date}} for {{userName}}</div>
+  </div>
+
+  <div class="summary-section">
+    <h2>Financial Summary</h2>
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="card-label">Total Income</div>
+        <div class="card-value income">{{summary.income}} {{currency}}</div>
+      </div>
+      <div class="summary-card">
+        <div class="card-label">Total Expenses</div>
+        <div class="card-value expense">{{summary.expenses}} {{currency}}</div>
+      </div>
+      <div class="summary-card">
+        <div class="card-label">Net Balance</div>
+        <div class="card-value">{{summary.netBalance}} {{currency}}</div>
+      </div>
+      <div class="summary-card">
+        <div class="card-label">Transaction Count</div>
+        <div class="card-value">{{summary.transactionCount}}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-section">
+    <h2 class="chart-title">Spending by Category</h2>
+    <div class="chart-container">
+      <canvas id="categoryChart" height="250"></canvas>
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <div class="chart-section">
+    <h2 class="chart-title">Income vs Expenses Timeline</h2>
+    <div class="chart-container">
+      <canvas id="timelineChart" height="250"></canvas>
+    </div>
+  </div>
+
+  <div class="chart-section">
+    <h2 class="chart-title">Monthly Comparison</h2>
+    <div class="chart-container">
+      <canvas id="monthlyChart" height="250"></canvas>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>Budget Manager App | Confidential Financial Report</p>
+  </div>
+
+  <script>
+    const categoryData = JSON.parse('{{{categoryData}}}');
+    const timelineData = JSON.parse('{{{timelineData}}}');
+    const monthlyData = JSON.parse('{{{monthlyData}}}');
+    
+    const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', 
+                   '#ffc658', '#8dd1e1', '#a4de6c', '#d0ed57'];
+    
+    const formatCurrency = (value) => {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: '{{currency}}',
+        maximumFractionDigits: 0
+      }).format(value);
+    };
+
+    window.onload = function() {
+      // Only proceed if Chart is available
+      if (window.Chart) {
+        // Category pie chart
+        if (categoryData.length > 0) {
+          const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+          new Chart(categoryCtx, {
+            type: 'pie',
+            data: {
+              labels: categoryData.map(item => item.name),
+              datasets: [{
+                data: categoryData.map(item => item.value),
+                backgroundColor: categoryData.map((_, index) => COLORS[index % COLORS.length]),
+                hoverOffset: 4
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { position: 'right' },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      const value = context.raw;
+                      return formatCurrency(value);
+                    }
+                  }
+                }
+              }
+            }
+          });
+        }
+
+        // Timeline area chart
+        if (timelineData.length > 0) {
+          const timelineCtx = document.getElementById('timelineChart').getContext('2d');
+          new Chart(timelineCtx, {
+            type: 'line',
+            data: {
+              labels: timelineData.map(item => item.date),
+              datasets: [
+                {
+                  label: 'Income',
+                  data: timelineData.map(item => item.income),
+                  borderColor: '#4ade80',
+                  backgroundColor: 'rgba(74, 222, 128, 0.3)',
+                  fill: true,
+                  tension: 0.4
+                },
+                {
+                  label: 'Expense',
+                  data: timelineData.map(item => item.expense),
+                  borderColor: '#f87171',
+                  backgroundColor: 'rgba(248, 113, 113, 0.3)',
+                  fill: true,
+                  tension: 0.4
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                y: {
+                  ticks: {
+                    callback: function(value) {
+                      return formatCurrency(value).replace('{{currency}}', '');
+                    }
+                  }
+                }
+              }
+            }
+          });
+        }
+
+        // Monthly bar chart
+        if (monthlyData.length > 0) {
+          const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+          new Chart(monthlyCtx, {
+            type: 'bar',
+            data: {
+              labels: monthlyData.map(item => item.month),
+              datasets: [
+                {
+                  label: 'Income',
+                  data: monthlyData.map(item => item.income),
+                  backgroundColor: '#4ade80'
+                },
+                {
+                  label: 'Expense',
+                  data: monthlyData.map(item => item.expense),
+                  backgroundColor: '#f87171'
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                y: {
+                  ticks: {
+                    callback: function(value) {
+                      return formatCurrency(value).replace('{{currency}}', '');
+                    }
+                  }
+                }
+              }
+            }
+          });
+        }
+      } else {
+        console.error('Chart.js not loaded');
+        document.body.innerHTML += '<p style="color:red">Failed to load chart library</p>';
+      }
+    };
+  </script>
+</body>
+</html>

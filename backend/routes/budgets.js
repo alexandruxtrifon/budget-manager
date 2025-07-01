@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 
 module.exports = (pool) => {
-  // GET all budgets for a user
   router.get('/:user_id', async (req, res) => {
     const { user_id } = req.params;
     try {
@@ -17,7 +16,6 @@ module.exports = (pool) => {
     }
   });
 
-  // POST a new budget
   router.post('/', async (req, res) => {
     const {
       user_id, category_id, amount, period_start, period_end

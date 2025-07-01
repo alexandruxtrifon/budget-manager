@@ -1,60 +1,126 @@
-// const client = require('../db');
-
-// module.exports = async function (req, res) {
-//   if (req.method === 'GET') {
-//     const result = await client.query('SELECT * FROM accounts WHERE user_id = 1');
-//     res.writeHead(200, { 'Content-Type': 'application/json' });
-//     res.end(JSON.stringify(result.rows));
-//   }
-
-//   if (req.method === 'POST') {
-//     let body = '';
-//     req.on('data', chunk => body += chunk);
-//     req.on('end', async () => {
-//       const data = JSON.parse(body);
-//       await client.query(
-//         `INSERT INTO accounts (user_id, name, account_type, currency, initial_balance, current_balance)
-//          VALUES ($1, $2, $3, $4, $5, $5)`,
-//         [1, data.name, data.account_type, data.currency, data.initial_balance]
-//       );
-//       res.writeHead(201);
-//       res.end('Account created');
-//     });
-//   }
-// };
-
 const express = require('express');
 const router = express.Router();
+const authMiddleware = require('../authMiddleware');
 
-// Accepts a pool instance as dependency injection
 module.exports = (pool) => {
-  // GET /api/accounts
-  router.get('/', async (req, res) => {
+  router.get('/:user_id', authMiddleware, async (req, res) => {
+    const { user_id } = req.params;
+    
+    if (req.user.user_id != user_id) {
+      return res.status(403).json({ error: 'You can only access your own accounts' });
+    }
+    
     try {
-      const result = await pool.query('SELECT * FROM accounts ORDER BY account_id');
+      const result = await pool.query(
+        `SELECT * FROM accounts WHERE user_id = $1 ORDER BY name`,
+        [user_id]
+      );
       res.json(result.rows);
     } catch (err) {
-      console.error(err);
-      res.status(500).send('Error fetching accounts');
+      console.error('Error fetching accounts:', err);
+      res.status(500).json({ error: 'Failed to fetch accounts' });
     }
   });
 
-  // POST /api/accounts
-  router.post('/', async (req, res) => {
-    const { name, account_type, currency, initial_balance } = req.body;
+  router.post('/', authMiddleware, async (req, res) => {
+    const { user_id, name, account_type, currency, initial_balance } = req.body;
+    
+    if (req.user.user_id != user_id) {
+      return res.status(403).json({ error: 'You can only create accounts for yourself' });
+    }
+    
     try {
       const result = await pool.query(
-        `INSERT INTO accounts (user_id, name, account_type, currency, initial_balance, current_balance)
-         VALUES (1, $1, $2, $3, $4, $4) RETURNING *`,
-        [name, account_type, currency, initial_balance]
+        `INSERT INTO accounts 
+         (user_id, name, account_type, currency, initial_balance, current_balance) 
+         VALUES ($1, $2, $3, $4, $5, $5) 
+         RETURNING *`,
+        [user_id, name, account_type, currency, initial_balance]
       );
       res.status(201).json(result.rows[0]);
     } catch (err) {
-      console.error(err);
-      res.status(500).send('Error creating account');
+      console.error('Error creating account:', err);
+      res.status(500).json({ error: 'Failed to create account' });
+    }
+  });
+
+  router.put('/:account_id', authMiddleware, async (req, res) => {
+    const { account_id } = req.params;
+    const { name, account_type, currency, initial_balance } = req.body;
+    
+    try {
+      const accountCheck = await pool.query(
+        'SELECT user_id FROM accounts WHERE account_id = $1',
+        [account_id]
+      );
+      
+      if (accountCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Account not found' });
+      }
+      
+      if (accountCheck.rows[0].user_id !== req.user.user_id) {
+        return res.status(403).json({ error: 'You can only update your own accounts' });
+      }
+      
+      const previousAccount = await pool.query(
+        'SELECT initial_balance, current_balance FROM accounts WHERE account_id = $1',
+        [account_id]
+      );
+      
+      const balanceDifference = initial_balance - previousAccount.rows[0].initial_balance;
+      const newCurrentBalance = parseFloat(previousAccount.rows[0].current_balance) + balanceDifference;
+      
+      const result = await pool.query(
+        `UPDATE accounts 
+         SET name = $1, account_type = $2, currency = $3, initial_balance = $4, current_balance = $5, updated_at = NOW() 
+         WHERE account_id = $6 
+         RETURNING *`,
+        [name, account_type, currency, initial_balance, newCurrentBalance, account_id]
+      );
+      
+      res.json(result.rows[0]);
+    } catch (err) {
+      console.error('Error updating account:', err);
+      res.status(500).json({ error: 'Failed to update account' });
+    }
+  });
+
+  router.delete('/:account_id', authMiddleware, async (req, res) => {
+    const { account_id } = req.params;
+    
+    try {
+      const accountCheck = await pool.query(
+        'SELECT user_id FROM accounts WHERE account_id = $1',
+        [account_id]
+      );
+      
+      if (accountCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Account not found' });
+      }
+      
+      if (accountCheck.rows[0].user_id !== req.user.user_id) {
+        return res.status(403).json({ error: 'You can only delete your own accounts' });
+      }
+      
+      const transactionsCheck = await pool.query(
+        'SELECT COUNT(*) FROM transactions WHERE account_id = $1',
+        [account_id]
+      );
+      
+      if (parseInt(transactionsCheck.rows[0].count) > 0) {
+        return res.status(400).json({ 
+          error: 'Cannot delete account with transactions. Move or delete the transactions first.' 
+        });
+      }
+      
+      await pool.query('DELETE FROM accounts WHERE account_id = $1', [account_id]);
+      
+      res.json({ message: 'Account deleted successfully' });
+    } catch (err) {
+      console.error('Error deleting account:', err);
+      res.status(500).json({ error: 'Failed to delete account' });
     }
   });
 
   return router;
 };
-

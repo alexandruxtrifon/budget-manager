@@ -14,7 +14,7 @@ export function SiteHeader() {
                   <ModeToggle className="absolute right-4 top-4 z-10" />
           <Button variant="ghost" asChild size="sm" className="hidden sm:flex">
             <a
-              href="https://github.com/shadcn-ui/ui/tree/main/apps/v4/app/(examples)/dashboard"
+              href="https://github.com/alexandruxtrifon/budget-manager"
               rel="noopener noreferrer"
               target="_blank"
               className="dark:text-foreground">

@@ -1,5 +1,7 @@
 "use client"
 
+import { useRouter } from 'next/navigation';
+import { toast } from "sonner"
 import {
   IconCreditCard,
   IconDotsVertical,
@@ -33,7 +35,16 @@ export function NavUser({
   user
 }) {
   const { isMobile } = useSidebar()
-
+  const router = useRouter();
+  
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    
+    toast.success('Logged out successfully');
+    
+    router.push('/login');
+  };
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -90,7 +101,7 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout}>
               <IconLogout />
               Log out
             </DropdownMenuItem>

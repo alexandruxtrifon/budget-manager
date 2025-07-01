@@ -3,7 +3,6 @@ const router = express.Router();
 const bcrypt = require('bcrypt');
 
 module.exports = (pool) => {
-  // Register a new user
   router.post('/register', async (req, res) => {
     const { email, password, full_name } = req.body;
 
@@ -22,7 +21,6 @@ module.exports = (pool) => {
     }
   });
 
-  // Login a user (no token yet)
   router.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
@@ -38,7 +36,6 @@ module.exports = (pool) => {
       const validPassword = await bcrypt.compare(password, user.password_hash);
       if (!validPassword) return res.status(400).json({ error: 'Invalid email or password' });
 
-      // Just return the user ID and basic info for now
       res.json({
         user_id: user.user_id,
         email: user.email,

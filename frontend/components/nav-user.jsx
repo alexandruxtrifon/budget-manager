@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { useRouter } from 'next/navigation';
 import { toast } from "sonner"
 import {
@@ -30,22 +31,67 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { UserAccountDialog } from "@/components/user-account-dialog"
 
 export function NavUser({
-  user
+  user,
+  onUserUpdate
 }) {
   const { isMobile } = useSidebar()
   const router = useRouter();
+  const [showAccountDialog, setShowAccountDialog] = useState(false);
+
+  // const handleLogout = () => {
+  //   localStorage.removeItem('token');
+  //   localStorage.removeItem('user');
+    
+  //   toast.success('Logged out successfully');
+    
+  //   router.push('/login');
+  // };
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (token) {
+        // Call the backend logout endpoint
+        const response = await fetch('http://localhost:3001/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          console.log('Logout logged successfully');
+        } else {
+          console.error('Failed to log logout activity');
+        }
+      }
+    } catch (error) {
+      console.error('Error calling logout endpoint:', error);
+      // Continue with logout even if logging fails
+    } finally {
+      // Always clear local storage and redirect, even if API call fails
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      
+      toast.success('Logged out successfully');
+      
+      router.push('/login');
+    }
+  };
   
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    
-    toast.success('Logged out successfully');
-    
-    router.push('/login');
+  const handleUserUpdate = (updatedUser) => {
+      console.log('NavUser received updated user:', updatedUser);
+
+    if (onUserUpdate) {
+      onUserUpdate(updatedUser);
+    }
   };
   return (
+    <>
     <SidebarMenu>
       <SidebarMenuItem>
         <DropdownMenu>
@@ -87,14 +133,14 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowAccountDialog(true)}>
                 <IconUserCircle />
                 Account
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              {/* <DropdownMenuItem>
                 <IconCreditCard />
                 Billing
-              </DropdownMenuItem>
+              </DropdownMenuItem> */}
               <DropdownMenuItem>
                 <IconNotification />
                 Notifications
@@ -109,5 +155,13 @@ export function NavUser({
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>
+
+    <UserAccountDialog
+      open={showAccountDialog}
+      onOpenChange={setShowAccountDialog}
+      user={user}
+      onUserUpdate={handleUserUpdate}
+    />
+  </>
   );
 }

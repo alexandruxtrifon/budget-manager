@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../authMiddleware');
+const { logActivity } = require('../logActivity');
 
 module.exports = (pool) => {
   router.get('/:user_id', authMiddleware, async (req, res) => {
@@ -15,6 +16,12 @@ module.exports = (pool) => {
         `SELECT * FROM accounts WHERE user_id = $1 ORDER BY name`,
         [user_id]
       );
+      await logActivity(pool, req.user.user_id, 'VIEW_ACCOUNTS', 'ACCOUNT', null, {
+        user_email: req.user.email,
+        accounts_count: result.rows.length,
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      });
       res.json(result.rows);
     } catch (err) {
       console.error('Error fetching accounts:', err);
@@ -36,6 +43,25 @@ module.exports = (pool) => {
          VALUES ($1, $2, $3, $4, $5, $5) 
          RETURNING *`,
         [user_id, name, account_type, currency, initial_balance]
+      );
+
+      const newAccount = result.rows[0];
+
+      await logActivity(
+        pool, 
+        req.user.user_id, 
+        `CREATE_ACCOUNT|${name}|${newAccount.account_id}`, 
+        'ACCOUNT', 
+        name, 
+        {
+          user_email: req.user.email,
+          account_id: newAccount.account_id,
+          account_type: account_type,
+          currency: currency,
+          initial_balance: initial_balance,
+          ip: req.ip,
+          userAgent: req.get('User-Agent')
+        }
       );
       res.status(201).json(result.rows[0]);
     } catch (err) {
@@ -66,9 +92,22 @@ module.exports = (pool) => {
         'SELECT initial_balance, current_balance FROM accounts WHERE account_id = $1',
         [account_id]
       );
+
       
       const balanceDifference = initial_balance - previousAccount.rows[0].initial_balance;
       const newCurrentBalance = parseFloat(previousAccount.rows[0].current_balance) + balanceDifference;
+      //const previousAccount = accountCheck.rows[0];
+      
+      // Track what changed
+      // const changes = {};
+      // if (name !== previousAccount.name) changes.name = { from: previousAccount.name, to: name };
+      // if (account_type !== previousAccount.account_type) changes.account_type = { from: previousAccount.account_type, to: account_type };
+      // if (currency !== previousAccount.currency) changes.currency = { from: previousAccount.currency, to: currency };
+      // if (initial_balance !== previousAccount.initial_balance) changes.initial_balance = { from: previousAccount.initial_balance, to: initial_balance };
+      
+      // const balanceDifference = initial_balance - previousAccount.initial_balance;
+      // const newCurrentBalance = parseFloat(previousAccount.current_balance) + balanceDifference;
+      
       
       const result = await pool.query(
         `UPDATE accounts 
@@ -76,6 +115,24 @@ module.exports = (pool) => {
          WHERE account_id = $6 
          RETURNING *`,
         [name, account_type, currency, initial_balance, newCurrentBalance, account_id]
+      );
+
+      const updatedAccount = result.rows[0];
+      await logActivity(
+        pool, 
+        req.user.user_id, 
+        `UPDATE_ACCOUNT|${updatedAccount.name}|${account_id}`, 
+        'ACCOUNT', 
+        name, 
+        {
+          user_email: req.user.email,
+          account_id: account_id,
+          changes: changes || '',
+          balance_difference: balanceDifference,
+          new_current_balance: newCurrentBalance,
+          ip: req.ip,
+          userAgent: req.get('User-Agent')
+        }
       );
       
       res.json(result.rows[0]);
@@ -106,15 +163,49 @@ module.exports = (pool) => {
         'SELECT COUNT(*) FROM transactions WHERE account_id = $1',
         [account_id]
       );
-      
+      const result = await pool.query(
+        'SELECT name FROM accounts WHERE account_id = $1', [account_id]);
+        const accountToDelete = result.rows[0];
+        console.log('Account to delete:', accountToDelete);
       if (parseInt(transactionsCheck.rows[0].count) > 0) {
+        await logActivity(
+          pool, 
+          req.user.user_id, 
+          `DELETE_ACCOUNT_FAILED|${accountToDelete.name}|${account_id}`, 
+          'ACCOUNT', 
+          accountToDelete.name, 
+          {
+            user_email: req.user.email,
+            account_id: account_id,
+            reason: 'has_transactions',
+            transaction_count: parseInt(transactionsCheck.rows[0].count),
+            ip: req.ip,
+            userAgent: req.get('User-Agent')
+          }
+        );
+
         return res.status(400).json({ 
           error: 'Cannot delete account with transactions. Move or delete the transactions first.' 
         });
       }
       
       await pool.query('DELETE FROM accounts WHERE account_id = $1', [account_id]);
-      
+      await logActivity(
+        pool, 
+        req.user.user_id, 
+        `DELETE_ACCOUNT|${accountToDelete.name}|${account_id}`, 
+        'ACCOUNT', 
+        accountToDelete.name, 
+        {
+          user_email: req.user.email,
+          deleted_account_id: account_id,
+          deleted_account_type: accountToDelete.account_type,
+          deleted_account_currency: accountToDelete.currency,
+          final_balance: accountToDelete.current_balance,
+          ip: req.ip,
+          userAgent: req.get('User-Agent')
+        }
+      );
       res.json({ message: 'Account deleted successfully' });
     } catch (err) {
       console.error('Error deleting account:', err);

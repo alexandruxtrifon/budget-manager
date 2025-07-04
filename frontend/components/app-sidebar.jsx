@@ -19,6 +19,14 @@ import {
   IconSettings,
   IconUsers,
   IconHistory,
+  IconFile,
+  IconFileAnalytics,
+  IconChartLine,
+  IconChartAreaLine,
+  IconChartAreaFilled,
+  IconChartColumn,
+  IconChartArrows,
+  IconChartDots2,
 } from "@tabler/icons-react"
 
 import { NavDocuments } from "@/components/nav-documents"
@@ -37,6 +45,7 @@ import {
 
 export function AppSidebar({
   user,
+  onUserUpdate,
   ...props
 }) {
 const data = {
@@ -61,6 +70,11 @@ const data = {
       title: "Analytics",
       url: "/analytics",
       icon: IconChartBar,
+    },
+    {
+      title: "Forecast",
+      url: "/forecast",
+      icon: IconChartDots2,
     }
   ],
   navSecondary: [
@@ -117,6 +131,16 @@ const data = {
         name: "Reports",
         url: "#",
         icon: IconReport,
+      },
+      {
+        name: "Aggregate Data",
+        url: "/aggregate",
+        icon: IconFileAnalytics,
+      },
+      {
+        name: "Users",
+        url: "/users",
+        icon: IconUsers,
       }
     ];
     
@@ -143,7 +167,7 @@ const data = {
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={user} />
+        <NavUser user={user} onUserUpdate={onUserUpdate}/>
       </SidebarFooter>
     </Sidebar>
   );

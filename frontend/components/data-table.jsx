@@ -452,9 +452,9 @@ export function DataTable({
   userId,
   onImportComplete,
 }) {
-  console.log("DataTable received data:", initialData?.length || 0, "transactions");
-  console.log("DataTable received accounts:", accounts?.length || 0, "accounts");
-  console.log("First transaction:", initialData?.[0]);
+  // console.log("DataTable received data:", initialData?.length || 0, "transactions");
+  // console.log("DataTable received accounts:", accounts?.length || 0, "accounts");
+  // console.log("First transaction:", initialData?.[0]);
   
   const [data, setData] = React.useState(() => initialData);
   const [rowSelection, setRowSelection] = React.useState({});

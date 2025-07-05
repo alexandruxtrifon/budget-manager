@@ -19,7 +19,7 @@ router.post('/login', async (req, res) => {
     //if (!user) return res.status(400).json({ error: 'Invalid email or password' });
     if (result.rows.length === 0) {
       // Log failed login attempt (no user found)
-      await logActivity(pool, null, 'LOGIN_FAILED', 'USER', email, { 
+      await logActivity(pool, null, 'LOGIN_FAILED_EMAIL', 'USER', email, { 
         reason: 'email_not_found',
         ip: req.ip,
         userAgent: req.get('User-Agent')
@@ -30,7 +30,7 @@ router.post('/login', async (req, res) => {
     const user = result.rows[0];
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
       if (!isValidPassword) {
-        await logActivity(pool, user.user_id, 'LOGIN_FAILED', 'USER', user.email, { 
+        await logActivity(pool, user.user_id, 'LOGIN_FAILED_PASS', 'USER', user.email, { 
           reason: 'invalid_password',
           ip: req.ip,
           userAgent: req.get('User-Agent')
@@ -68,6 +68,7 @@ router.post('/login', async (req, res) => {
 
 router.post('/logout', authMiddleware, async (req, res) => {
   try {
+    console.log('User logout request:', req.user);
     const userResult = await pool.query(
       'SELECT full_name FROM users WHERE user_id = $1',
       [req.user.user_id]

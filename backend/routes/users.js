@@ -3,6 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcrypt');
 const authMiddleware = require('../authMiddleware');
 const adminMiddleware = require('../adminMiddleware');
+const { logActivity } = require('../logActivity');
 
 module.exports = (pool) => {
   router.get('/', authMiddleware, adminMiddleware, async (req, res) => {
@@ -21,6 +22,12 @@ module.exports = (pool) => {
         FROM users 
         ORDER BY created_at DESC
       `);
+    await logActivity(pool, req.user.user_id, 'VIEW_ALL_USERS', 'USER', null, {
+      admin_email: req.user.email,
+      user_count: result.rows.length,
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
       res.json(result.rows);
     } catch (err) {
       console.error(err);
@@ -37,11 +44,33 @@ module.exports = (pool) => {
          VALUES ($1, $2, $3) RETURNING user_id, email, full_name`,
         [email, hashedPassword, full_name]
       );
-      res.status(201).json(result.rows[0]);
+      const notificationResult = await pool.query(
+        `INSERT INTO notifications (user_id, type, payload, is_sent)
+        VALUES ($1, $2, $3, $4) RETURNING notification_id`,
+        [
+          result.rows[0].user_id, 
+          'welcome_email', 
+          JSON.stringify({
+            email: email,
+            name: full_name,
+            timestamp: new Date()
+          }), 
+          false
+        ]
+      );
+      await logActivity(pool, result.rows[0].user_id, 'REGISTER', 'USER', email, {
+      full_name,
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+      res.status(201).json({
+        ...result.rows[0],
+        notification_id: notificationResult.rows[0].notification_id
+      });
     } catch (err) {
       console.error(err);
       if (err.code === '23505') {
-        res.status(400).send('Email already exists');
+        res.status(400).send({error: 'Email already exists'});
       } else {
         res.status(500).send('Error registering user');
       }
@@ -180,7 +209,7 @@ module.exports = (pool) => {
            RETURNING user_id, email, full_name, language_preference, role, created_at, updated_at`,
           [full_name, email, language_preference, hashedNewPassword, role || req.user.role, userId]
         );
-
+        
         res.json(result.rows[0]);
       } else {
         // Update user without password change
@@ -195,7 +224,18 @@ module.exports = (pool) => {
         if (result.rows.length === 0) {
           return res.status(404).json({ error: 'User not found' });
         }
-
+        await logActivity(pool, req.user.user_id, 
+          req.user.user_id == userId ? 'UPDATE_OWN_PROFILE' : 'UPDATE_USER_PROFILE', 
+          'USER', 
+          result.rows[0].email, 
+          {
+            updated_user_id: userId,
+            updated_fields: Object.keys(req.body).filter(field => field !== 'currentPassword' && field !== 'newPassword'),
+            password_changed: !!newPassword,
+            ip: req.ip,
+            userAgent: req.get('User-Agent')
+          }
+        );
         res.json(result.rows[0]);
       }
     } catch (err) {
@@ -219,6 +259,13 @@ module.exports = (pool) => {
          RETURNING user_id, email, full_name, role, language_preference, created_at, updated_at`,
         [email, hashedPassword, full_name, role || 'user', language_preference || 'en']
       );
+      await logActivity(pool, req.user.user_id, 'CREATE_USER', 'USER', email, {
+      admin_email: req.user.email,
+      created_user_id: result.rows[0].user_id,
+      created_user_role: role || 'user',
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
       res.status(201).json(result.rows[0]);
     } catch (err) {
       console.error(err);
@@ -248,6 +295,13 @@ module.exports = (pool) => {
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'User not found' });
       }
+      await logActivity(pool, req.user.user_id, 'DELETE_USER', 'USER', result.rows[0].email, {
+        admin_email: req.user.email,
+        deleted_user_id: userId,
+        deleted_user_name: result.rows[0].full_name,
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      });
 
       res.json({ message: 'User deleted successfully', user: result.rows[0] });
     } catch (err) {
@@ -300,6 +354,12 @@ module.exports = (pool) => {
         LIMIT 10
       `, [userId]);
 
+      await logActivity(pool, req.user.user_id, 'VIEW_USER_DETAILS', 'USER', userResult.rows[0].email, {
+        admin_email: req.user.email,
+        viewed_user_id: userId,
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      });
       res.json({
         user,
         accounts: accountsResult.rows,
@@ -308,6 +368,32 @@ module.exports = (pool) => {
     } catch (err) {
       console.error('Error fetching user details:', err);
       res.status(500).json({ error: 'Failed to fetch user details' });
+    }
+  });
+
+  router.get('/notification/:notificationId', async (req, res) => {
+    try {
+      const { notificationId } = req.params;
+      console.log(`Checking notification ${notificationId}`);
+
+      const result = await pool.query(
+        `SELECT is_sent, payload->>'emailPreviewUrl' as preview_url 
+        FROM notifications 
+        WHERE notification_id = $1`,
+        [notificationId]
+      );
+      
+      if (result.rows.length === 0) {
+        console.log(`Notification ${notificationId} not found`);
+
+        return res.status(404).json({ error: 'Notification not found' });
+      }
+      console.log('Notification data:', result.rows[0]);
+      
+      res.json(result.rows[0]);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Server error' });
     }
   });
   return router;

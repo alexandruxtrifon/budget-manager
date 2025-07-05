@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const authMiddleware = require("../authMiddleware");
+const { logActivity } = require('../logActivity');
 
 module.exports = (pool) => {
   // GET all transactions for a user
@@ -23,6 +24,12 @@ module.exports = (pool) => {
          ORDER BY t.transaction_date DESC`,
         [userId]
       );
+    await logActivity(pool, req.user.user_id, 'VIEW_TRANSACTIONS', 'TRANSACTION', null, {
+      user_email: req.user.email,
+      transaction_count: result.rows.length,
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
 
       res.json(result.rows);
     } catch (error) {
@@ -67,8 +74,15 @@ router.get('/account/:accountId', authMiddleware, async (req, res) => {
     }
     
     query += ' ORDER BY t.transaction_date DESC';
-    
     const result = await pool.query(query, queryParams);
+    await logActivity(pool, req.user.user_id, 'VIEW_ACCOUNT_TRANSACTIONS', 'TRANSACTION', null, {
+      user_email: req.user.email,
+      account_id: accountId,
+      transaction_count: result.rows.length,
+      date_range: startDate && endDate ? `${startDate} to ${endDate}` : 'all',
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching account transactions:', error);
@@ -106,6 +120,14 @@ router.get('/account/:accountId', authMiddleware, async (req, res) => {
           transaction_date,
         ]
       );
+    await logActivity(pool, user_id, 'CREATE_TRANSACTION', 'TRANSACTION', description, {
+      account_id,
+      amount,
+      currency,
+      transaction_type,
+      category_id,
+      transaction_date
+    });
       res.status(201).json(result.rows[0]);
     } catch (err) {
       console.error(err);

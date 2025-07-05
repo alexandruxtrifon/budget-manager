@@ -74,6 +74,7 @@ export function NavUser({
       // Continue with logout even if logging fails
     } finally {
       // Always clear local storage and redirect, even if API call fails
+      console.log(localStorage);
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       

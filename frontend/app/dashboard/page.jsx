@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/sidebar"
 import { ModeToggle } from "@/components/ModeToggle"
 import { LoadingScreen } from "@/components/ui/spinner"
-import data from "./data.json"
+import { NotificationChecker } from "@/components/notification";
 
 export default function Page() {
   const router = useRouter();
@@ -101,6 +101,7 @@ export default function Page() {
         "--header-height": "calc(var(--spacing) * 12)"
       }
     }>
+      <NotificationChecker/>
       <AppSidebar user={user} onUserUpdate={handleUserUpdate} variant="inset" />
       <SidebarInset>
         <SiteHeader />

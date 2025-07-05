@@ -231,7 +231,7 @@ export default function UsersPage() {
         delete updateData.password;
       }
 
-      console.log("Sending update data:", updateData); // Debug log
+      //console.log("Sending update data:", updateData); // Debug log
 
       const response = await fetch(
         `http://localhost:3001/api/users/${editingUser.user_id}`,

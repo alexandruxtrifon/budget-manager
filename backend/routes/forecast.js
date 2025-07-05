@@ -233,7 +233,6 @@ const generateForecast = (dailyData, days = 30) => {
           }
         }
       };
-      console.log(req.user)
       await logActivity(pool, req.user.user_id, 'VIEW_FORECAST', 'REPORT', null, {
         start_date: start,
         end_date: end,

@@ -75,9 +75,9 @@ export function UserAccountDialog({ open, onOpenChange, user, onUserUpdate }) {
   const [showPasswordFields, setShowPasswordFields] = useState(false)
 
   useEffect(() => {
-      console.log('Dialog useEffect triggered:', { user, open });
+      //console.log('Dialog useEffect triggered:', { user, open });
     if (user && open) {
-          console.log('Setting form data with user:', user);
+          //console.log('Setting form data with user:', user);
 
       setFormData({
         full_name: user.full_name || user.name || '',

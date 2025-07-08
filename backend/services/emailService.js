@@ -105,7 +105,7 @@ async function sendWelcomeEmail(recipient, name) {
 }
 
 // Process notifications
-async function processNotifications() {
+async function processNotificationss() {
   if (!isInitialized) {
     const success = await createTestAccount();
     if (!success) {
@@ -166,7 +166,183 @@ async function processNotifications() {
   }
 }
 
-// Initialize and start the service
+async function processNotifications() {
+  try {
+    // Ensure transporter is initialized
+    if (!isInitialized) {
+      await init();
+      if (!isInitialized) {
+        console.error("Email service failed to initialize");
+        return;
+      }
+    }
+    
+    const client = await pool.connect();
+    
+    try {
+        await processWelcomeEmails(client);
+        await processOtpEmails(client);
+    } 
+    finally {
+      client.release();
+    }
+    } catch (error) {
+    console.error('Error in notification processing:', error);
+    }
+}
+
+async function sendOtpEmail(recipient, name, otp) {
+  if (!isInitialized) {
+    const success = await createTestAccount();
+    if (!success) {
+      console.error('Failed to initialize email transporter');
+      return false;
+    }
+  }
+  
+  try {
+    const info = await transporter.sendMail({
+      from: '"Budget Manager" <budgetmanager@example.com>',
+      to: recipient,
+      subject: 'Verify Your Email - Budget Manager',
+      text: 
+        `Hello ${name},\n\n` +
+        `Thank you for registering with Budget Manager! Please verify your email address using the verification code below:\n\n` +
+        `Verification Code: ${otp}\n\n` +
+        `This code will expire in 15 minutes.\n\n` +
+        `If you didn't request this code, you can safely ignore this email.\n\n` +
+        `Best regards,\n` +
+        `The Budget Manager Team`,
+      html: 
+        `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+          <h2 style="color: #4a6ee0;">Verify Your Email</h2>
+          <p>Hello <strong>${name}</strong>,</p>
+          <p>Thank you for registering with Budget Manager! Please verify your email address using the verification code below:</p>
+          <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; text-align: center;">
+            <h1 style="font-size: 32px; font-family: monospace; letter-spacing: 5px; margin: 0; color: #333;">${otp}</h1>
+          </div>
+          <p>This code will expire in 15 minutes.</p>
+          <p>If you didn't request this code, you can safely ignore this email.</p>
+          <p>Best regards,<br>The Budget Manager Team</p>
+          <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 12px; color: #777;">
+            <p>This is an automated message, please do not reply directly to this email.</p>
+          </div>
+        </div>`
+    });
+
+    
+
+    console.log('OTP email sent to %s', recipient);
+    const previewUrl = nodemailer.getTestMessageUrl(info);
+    console.log('Preview URL: %s', previewUrl);
+    return {
+        success: true,
+        previewUrl: previewUrl
+    };
+  } catch (error) {
+    console.error('Error sending OTP email:', error);
+    return {
+        success: false,
+        error: error.message || 'Failed to send OTP email'
+    };
+  }
+}
+
+async function processOtpEmails(client) {
+  // Get pending OTP emails
+  const result = await client.query(
+    `SELECT n.notification_id, n.user_id, n.payload, u.email, u.full_name
+     FROM notifications n
+     JOIN users u ON n.user_id = u.user_id
+     WHERE n.type = 'otp_email' AND n.is_sent = false
+     LIMIT 10`
+  );
+  
+  if (result.rows.length !== 0) {
+    console.log(`Found ${result.rows.length} pending OTP emails to process`);
+  }
+
+  for (const notification of result.rows) {
+    try {
+      await client.query('BEGIN');
+      
+      const payload = typeof notification.payload === 'string' ? 
+        JSON.parse(notification.payload) : notification.payload;
+      
+      // Send OTP email
+      const emailResult = await sendOtpEmail(
+        notification.email,
+        notification.full_name || 'User',
+        payload.otp
+      );
+      
+      if (emailResult.success) {
+        // Mark notification as sent
+        await client.query(
+          `UPDATE notifications 
+           SET is_sent = true, 
+               payload = COALESCE(payload, '{}'::jsonb) || $2::jsonb
+           WHERE notification_id = $1`,
+          [notification.notification_id, JSON.stringify({emailPreviewUrl: emailResult.previewUrl})]
+        );
+        console.log(`OTP notification ${notification.notification_id} updated with preview URL`);
+        await client.query('COMMIT');
+      } else {
+        await client.query('ROLLBACK');
+      }
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error(`Error processing OTP notification ${notification.notification_id}:`, error);
+    }
+  }
+}
+
+async function processWelcomeEmails(client) {
+    // Process each notification with its own transaction
+      const result = await client.query(
+        `SELECT n.notification_id, n.user_id, n.payload, u.email, u.full_name
+         FROM notifications n
+         JOIN users u ON n.user_id = u.user_id
+         WHERE n.type = 'welcome_email' AND n.is_sent = false
+         LIMIT 10`
+      );
+      if (result.rows.length !== 0) {
+      console.log(`Found ${result.rows.length} pending welcome emails to process`);
+      }
+      
+      // Process each notification with its own transaction
+      for (const notification of result.rows) {
+        try {
+          await client.query('BEGIN');
+          
+          const emailResult = await sendWelcomeEmail(
+            notification.email,
+            notification.full_name || 'New User'
+          );
+          
+          if (emailResult.success) {
+            // Handle case where payload might be null
+            await client.query(
+              `UPDATE notifications 
+               SET is_sent = true, 
+                   payload = COALESCE(payload, '{}'::jsonb) || $2::jsonb
+               WHERE notification_id = $1`,
+              [notification.notification_id, JSON.stringify({emailPreviewUrl: emailResult.previewUrl})]
+            );
+            console.log(`Notification ${notification.notification_id} updated with preview URL: ${emailResult.previewUrl}`);
+            await client.query('COMMIT');
+          } else {
+            await client.query('ROLLBACK');
+          }
+        }
+        catch (error) {
+          await client.query('ROLLBACK');
+          console.error(`Error processing notification ${notification.notification_id}:`, error);
+        }
+    }
+    
+}
+
 async function init() {
   try {
     if (isInitialized) {
@@ -179,7 +355,15 @@ async function init() {
         user: testAccount.user,
         pass: testAccount.pass,
       },
-    })
+    });
+    await transporter.verify();
+        isInitialized = true;
+    console.log('Email service initialized with account:', {
+      user: testAccount.user,
+      pass: testAccount.pass,
+      preview: 'https://ethereal.email'
+    });
+
     }
     await createTestAccount();
     console.log('Email notification service initialized successfully');
@@ -193,7 +377,8 @@ async function init() {
 module.exports = {
   init,
   sendWelcomeEmail,
-  processNotifications
+  processNotifications,
+  sendOtpEmail
 };
 
 // If run directly (node emailService.js)

@@ -24,9 +24,11 @@ export function NotificationChecker() {
         if (data.is_sent && data.preview_url) {
           // Show toast with preview URL
           console.log('Email sent with preview URL:', data.preview_url);
+          const isOtpEmail = data.type === 'otp_email';
+
           toast(
             <div>
-              <p>Welcome email sent!</p>
+              <p>{isOtpEmail ? 'Verification code sent!' : 'Welcome email sent!'}</p>
               <p>
                 <a 
                   href={data.preview_url} 
@@ -34,7 +36,7 @@ export function NotificationChecker() {
                   rel="noreferrer"
                   className="underline font-medium"
                 >
-                  View Preview Email
+                  Redirect to mail
                 </a>
               </p>
             </div>,

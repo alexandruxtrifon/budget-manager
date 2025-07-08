@@ -76,7 +76,7 @@ router.post('/logout', authMiddleware, async (req, res) => {
     
     const fullName = userResult.rows[0]?.full_name || 'UNK';
     
-    await logActivity(pool, req.user.user_id, `LOGOUT|${fullName}|${req.user.user_id}`, 'USER', req.user.email, {
+    await logActivity(pool, req.user.user_id, 'LOGOUT' /*`LOGOUT|${fullName}|${req.user.user_id}`*/, 'USER', req.user.email, {
       ip: req.ip,
       userAgent: req.get('User-Agent')
     });

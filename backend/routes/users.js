@@ -4,6 +4,9 @@ const bcrypt = require('bcrypt');
 const authMiddleware = require('../authMiddleware');
 const adminMiddleware = require('../adminMiddleware');
 const { logActivity } = require('../logActivity');
+const crypto = require('crypto');
+
+const OTP_MINUTES = 2; 
 
 module.exports = (pool) => {
   router.get('/', authMiddleware, adminMiddleware, async (req, res) => {
@@ -39,25 +42,52 @@ module.exports = (pool) => {
     const { email, password, full_name } = req.body;
     try {
       const hashedPassword = await bcrypt.hash(password, 10);
+
+      const otp = crypto.randomInt(100000, 999999).toString();
+      const otpExpiry = new Date();
+      otpExpiry.setMinutes(otpExpiry.getMinutes() + OTP_MINUTES); // OTP valid for 2
+
+      // const result = await pool.query(
+      //   `INSERT INTO users (email, password_hash, full_name)
+      //    VALUES ($1, $2, $3) RETURNING user_id, email, full_name`,
+      //   [email, hashedPassword, full_name]
+      // );
       const result = await pool.query(
-        `INSERT INTO users (email, password_hash, full_name)
-         VALUES ($1, $2, $3) RETURNING user_id, email, full_name`,
-        [email, hashedPassword, full_name]
-      );
+      `INSERT INTO users (email, password_hash, full_name, otp, otp_expiry, is_verified)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING user_id, email, full_name`,
+      [email, hashedPassword, full_name, otp, otpExpiry, false]
+    );
+      // const notificationResult = await pool.query(
+      //   `INSERT INTO notifications (user_id, type, payload, is_sent)
+      //   VALUES ($1, $2, $3, $4) RETURNING notification_id`,
+      //   [
+      //     result.rows[0].user_id, 
+      //     'welcome_email', 
+      //     JSON.stringify({
+      //       email: email,
+      //       name: full_name,
+      //       timestamp: new Date()
+      //     }), 
+      //     false
+      //   ]
+      // );
+
       const notificationResult = await pool.query(
         `INSERT INTO notifications (user_id, type, payload, is_sent)
         VALUES ($1, $2, $3, $4) RETURNING notification_id`,
         [
           result.rows[0].user_id, 
-          'welcome_email', 
+          'otp_email', 
           JSON.stringify({
             email: email,
             name: full_name,
+            otp: otp,
             timestamp: new Date()
           }), 
           false
         ]
       );
+
       await logActivity(pool, result.rows[0].user_id, 'REGISTER', 'USER', email, {
       full_name,
       ip: req.ip,
@@ -74,6 +104,109 @@ module.exports = (pool) => {
       } else {
         res.status(500).send('Error registering user');
       }
+    }
+  });
+
+  router.post('/verify-otp', async (req, res) => {
+    const { user_id, otp } = req.body;
+    
+    if (!user_id || !otp) {
+      return res.status(400).json({ error: 'User ID and OTP are required' });
+    }
+    
+    try {
+      // Check if OTP is valid and not expired
+      const result = await pool.query(
+        `SELECT * FROM users 
+        WHERE user_id = $1 AND otp = $2 AND otp_expiry > NOW()`,
+        [user_id, otp]
+      );
+      
+      if (result.rows.length === 0) {
+        return res.status(400).json({ error: 'Invalid or expired OTP' });
+      }
+      
+      // Mark user as verified and clear OTP
+      await pool.query(
+        `UPDATE users 
+        SET is_verified = true, otp = NULL, otp_expiry = NULL 
+        WHERE user_id = $1`,
+        [user_id]
+      );
+      
+      await logActivity(pool, user_id, 'EMAIL_VERIFIED', 'USER', result.rows[0].email, {
+        verification_method: 'otp',
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+      
+      res.json({ message: 'Email verified successfully' });
+    } catch (err) {
+      console.error('Error verifying OTP:', err);
+      res.status(500).json({ error: 'Failed to verify OTP' });
+    }
+  });
+
+  // Add route for resending OTP
+  router.post('/resend-otp', async (req, res) => {
+    const { user_id } = req.body;
+    
+    if (!user_id) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+    
+    try {
+      // Get user details
+      const userResult = await pool.query(
+        'SELECT email, full_name FROM users WHERE user_id = $1',
+        [user_id]
+      );
+      
+      if (userResult.rows.length === 0) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      const user = userResult.rows[0];
+      
+      // Generate a new OTP
+      const otp = crypto.randomInt(100000, 999999).toString();
+      const otpExpiry = new Date();
+      otpExpiry.setMinutes(otpExpiry.getMinutes() + OTP_MINUTES);
+      
+      // Update user with new OTP
+      await pool.query(
+        `UPDATE users SET otp = $1, otp_expiry = $2 WHERE user_id = $3`,
+        [otp, otpExpiry, user_id]
+      );
+      
+      // Create notification for sending OTP email
+      const notificationResult = await pool.query(
+        `INSERT INTO notifications (user_id, type, payload, is_sent)
+        VALUES ($1, $2, $3, $4) RETURNING notification_id`,
+        [
+          user_id, 
+          'otp_email', 
+          JSON.stringify({
+            email: user.email,
+            name: user.full_name,
+            otp: otp,
+            timestamp: new Date()
+          }), 
+          false
+        ]
+      );
+      
+      await logActivity(pool, user_id, 'OTP_RESENT', 'USER', user.email, {
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+      
+      res.json({ message: 'OTP resent successfully',
+        notification_id: notificationResult.rows[0].notification_id
+      });
+    } catch (err) {
+      console.error('Error resending OTP:', err);
+      res.status(500).json({ error: 'Failed to resend OTP' });
     }
   });
 
@@ -377,7 +510,7 @@ module.exports = (pool) => {
       console.log(`Checking notification ${notificationId}`);
 
       const result = await pool.query(
-        `SELECT is_sent, payload->>'emailPreviewUrl' as preview_url 
+        `SELECT is_sent, type, payload->>'emailPreviewUrl' as preview_url 
         FROM notifications 
         WHERE notification_id = $1`,
         [notificationId]

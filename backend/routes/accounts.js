@@ -50,7 +50,8 @@ module.exports = (pool) => {
       await logActivity(
         pool, 
         req.user.user_id, 
-        `CREATE_ACCOUNT|${name}|${newAccount.account_id}`, 
+        //`CREATE_ACCOUNT|${name}|${newAccount.account_id}`, 
+        'CREATE_ACCOUNT',
         'ACCOUNT', 
         name, 
         {
@@ -121,7 +122,8 @@ module.exports = (pool) => {
       await logActivity(
         pool, 
         req.user.user_id, 
-        `UPDATE_ACCOUNT|${updatedAccount.name}|${account_id}`, 
+        //`UPDATE_ACCOUNT|${updatedAccount.name}|${account_id}`, 
+        'UPDATE_ACCOUNT',
         'ACCOUNT', 
         name, 
         {
@@ -171,7 +173,8 @@ module.exports = (pool) => {
         await logActivity(
           pool, 
           req.user.user_id, 
-          `DELETE_ACCOUNT_FAILED|${accountToDelete.name}|${account_id}`, 
+          //`DELETE_ACCOUNT_FAILED|${accountToDelete.name}|${account_id}`, 
+          'DELETE_ACCOUNT_FAILED',
           'ACCOUNT', 
           accountToDelete.name, 
           {
@@ -193,7 +196,8 @@ module.exports = (pool) => {
       await logActivity(
         pool, 
         req.user.user_id, 
-        `DELETE_ACCOUNT|${accountToDelete.name}|${account_id}`, 
+        //`DELETE_ACCOUNT|${accountToDelete.name}|${account_id}`, 
+        'DELETE_ACCOUNT',
         'ACCOUNT', 
         accountToDelete.name, 
         {

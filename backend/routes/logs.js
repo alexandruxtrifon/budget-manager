@@ -215,16 +215,16 @@ router.get('/stats', [authMiddleware, adminMiddleware], async (req, res) => {
 
     const failedLogins = parseInt(failedLoginsResult.rows[0].count);
     
-    console.log(`todayLogins: ${todayLogins}`);
-    console.log(`mostActiveUser: ${JSON.stringify(mostActiveUser)}`);
-    console.log(`biggestIncome: ${JSON.stringify(biggestIncome)}`);
-    console.log(`biggestExpense: ${JSON.stringify(biggestExpense)}`);
-    console.log(`newUsersThisMonth: ${newUsersThisMonth}`);
-    console.log(`importedTransactions: ${importedTransactions}`);
-    console.log(`totalTransactions: ${totalTransactions}`);
-    console.log(`avgTransactionAmount: ${avgTransactionAmount}`);
-    console.log(`successfulLogins: ${successfulLogins}`);
-    console.log(`failedLogins: ${failedLogins}`);
+    // console.log(`todayLogins: ${todayLogins}`);
+    // console.log(`mostActiveUser: ${JSON.stringify(mostActiveUser)}`);
+    // console.log(`biggestIncome: ${JSON.stringify(biggestIncome)}`);
+    // console.log(`biggestExpense: ${JSON.stringify(biggestExpense)}`);
+    // console.log(`newUsersThisMonth: ${newUsersThisMonth}`);
+    // console.log(`importedTransactions: ${importedTransactions}`);
+    // console.log(`totalTransactions: ${totalTransactions}`);
+    // console.log(`avgTransactionAmount: ${avgTransactionAmount}`);
+    // console.log(`successfulLogins: ${successfulLogins}`);
+    // console.log(`failedLogins: ${failedLogins}`);
     // Return all stats
     res.json({
       todayLogins,

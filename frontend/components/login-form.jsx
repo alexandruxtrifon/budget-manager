@@ -26,31 +26,31 @@ export function LoginForm() {
       body: JSON.stringify(form),
     })
 
-        if (res.ok) {
+        // if (res.ok) {
       const data = await res.json(); // Expect { message, token, user }
-      if (data.token) {
+      // if (data.token) {
         localStorage.setItem('token', data.token); 
         // Optionally store user info: localStorage.setItem('user', JSON.stringify(data.user));
         localStorage.setItem('user', JSON.stringify(data.user));
         toast.success(data.message || "Login successful");
         router.push("/dashboard");
-      } else {
-        toast.error("Login successful, but no token received.");
-      }
-    } else {
-      const errorText = await res.text();
-      let errorMessage = "Login failed. Please try again.";
-      try {
-        const errorObject = JSON.parse(errorText);
-        if (errorObject && errorObject.error) {
-          errorMessage = errorObject.error;
-        }
-      } catch (parseError) {
-        console.error("Failed to parse error response as JSON:", parseError);
-        if (errorText) errorMessage = errorText;
-      }
-      toast.error("Login Failed", { description: errorMessage });
-    }
+      // } else {
+      //   toast.error("Login successful, but no token received.");
+      // }
+    // } else {
+    //   const errorText = await res.text();
+    //   let errorMessage = "Login failed. Please try again.";
+    //   try {
+    //     const errorObject = JSON.parse(errorText);
+    //     if (errorObject && errorObject.error) {
+    //       errorMessage = errorObject.error;
+    //     }
+    //   } catch (parseError) {
+    //     console.error("Failed to parse error response as JSON:", parseError);
+    //     if (errorText) errorMessage = errorText;
+    //   }
+    //   toast.error("Login Failed", { description: errorMessage });
+    // }
   }
 
   return (

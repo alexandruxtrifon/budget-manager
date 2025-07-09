@@ -1,18 +1,24 @@
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import Sidebar from "@/components/Sidebar";
+import { GeistSans } from "geist/font/sans"
+import { GeistMono } from "geist/font/mono"
+import "./globals.css"
+import Sidebar from "@/components/Sidebar"
 import { ThemeProvider } from "@/components/theme-provider"
-import { Toaster } from "@/components/ui/sonner"
+//import { Toaster } from "@/components/ui/toaster"
+import { toast, Toaster } from "sonner"
+import { NavigationProvider } from "@/components/navigation-provider"
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+const geistSans = GeistSans;
+const geistMono = GeistMono;
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// const geistSans = Geist({
+//   variable: "--font-geist-sans",
+//   subsets: ["latin"],
+// });
+
+// const geistMono = Geist_Mono({
+//   variable: "--font-geist-mono",
+//   subsets: ["latin"],
+// });.
 
 export const metadata = {
   title: "Create Next App",
@@ -21,7 +27,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
     return (
-    <html lang="en" suppressHydrationWarning className="dark">
+    <html lang="en" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} dark`}>
       <body>
         
           <ThemeProvider
@@ -30,8 +36,10 @@ export default function RootLayout({ children }) {
             enableSystem
             disableTransitionOnChange
           >
+            <NavigationProvider>
             {children}
-            <Toaster />
+            <Toaster/>
+            </NavigationProvider>
           </ThemeProvider>
       </body>
     </html>

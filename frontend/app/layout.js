@@ -3,22 +3,28 @@ import { GeistMono } from "geist/font/mono"
 import "./globals.css"
 import Sidebar from "@/components/Sidebar"
 import { ThemeProvider } from "@/components/theme-provider"
+import { Toaster } from "@/components/ui/sonner"
+import { NotificationChecker } from "@/components/notification";
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
 //import { Toaster } from "@/components/ui/toaster"
 import { toast, Toaster } from "sonner"
 import { NavigationProvider } from "@/components/navigation-provider"
 
-const geistSans = GeistSans;
-const geistMono = GeistMono;
+// const geistSans = GeistSans;
+// const geistMono = GeistMono;
 
 // const geistSans = Geist({
 //   variable: "--font-geist-sans",
 //   subsets: ["latin"],
 // });
 
-// const geistMono = Geist_Mono({
-//   variable: "--font-geist-mono",
-//   subsets: ["latin"],
-// });.
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
 export const metadata = {
   title: "Create Next App",
@@ -37,6 +43,7 @@ export default function RootLayout({ children }) {
             disableTransitionOnChange
           >
             <NavigationProvider>
+            <NotificationChecker />
             {children}
             <Toaster/>
             </NavigationProvider>

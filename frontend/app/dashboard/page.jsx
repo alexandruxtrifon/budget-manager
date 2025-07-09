@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/sidebar"
 import { ModeToggle } from "@/components/ModeToggle"
 import { LoadingScreen } from "@/components/ui/spinner"
-import data from "./data.json"
+import { NotificationChecker } from "@/components/notification";
 
 export default function Page() {
   const router = useRouter();
@@ -22,6 +22,12 @@ export default function Page() {
   const [accounts, setAccounts] = useState([]);
   const [transactions, setTransactions] = useState([]);
 
+  const handleUserUpdate = (updatedUser) => {
+    console.log('Dashboard handleUserUpdate called with:', updatedUser);
+    console.log('Current user state before update:', user);
+    setUser({ ...updatedUser }); // Force new object reference to trigger re-render
+    console.log('User state should be updated now');
+  };
   const fetchData = async () => {
     if (!user || !user.user_id) return;
 
@@ -95,7 +101,8 @@ export default function Page() {
         "--header-height": "calc(var(--spacing) * 12)"
       }
     }>
-      <AppSidebar user={user} variant="inset" />
+      <NotificationChecker/>
+      <AppSidebar user={user} onUserUpdate={handleUserUpdate} variant="inset" />
       <SidebarInset>
         <SiteHeader />
         <div className="flex flex-1 flex-col">

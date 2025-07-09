@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const { parseBTStatement } = require("../../../bank-statement-parser/bt");
+const { logActivity } = require('../logActivity');
 
 const storage = multer.memoryStorage();
 const upload = multer({
@@ -87,6 +88,15 @@ module.exports = (pool) => {
           }
 
           await client.query("COMMIT");
+          await logActivity(pool, userId, 'IMPORT_BANK_STATEMENT', 'ACCOUNT', account.name, {
+            user_email: req.body.userEmail || 'unknown',
+            account_id: accountId,
+            transaction_count: transactionsList.length,
+            file_name: req.file.originalname,
+            file_size: req.file.size,
+            ip: req.ip,
+            userAgent: req.get('User-Agent')
+          });
           res.status(201).json({
             message: `Successfully imported ${transactionsList.length} transactions`,
             count: transactionsList.length,

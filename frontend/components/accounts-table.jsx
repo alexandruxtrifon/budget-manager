@@ -45,6 +45,8 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { IbanInput } from "@/components/IbanInput";
+import { set } from 'date-fns';
 
 export function AccountsTable({ accounts, userId, onAccountChange }) {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -53,7 +55,7 @@ export function AccountsTable({ accounts, userId, onAccountChange }) {
   const [accountToEdit, setAccountToEdit] = useState(null);
   const [accountToDelete, setAccountToDelete] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+  const [ibanValidation, setIbanValidation] = useState({ isValid: true });
   const [formData, setFormData] = useState({
     name: '',
     account_type: 'bank',
@@ -97,9 +99,21 @@ export function AccountsTable({ accounts, userId, onAccountChange }) {
       currency: 'RON',
       initial_balance: 0,
     });
+    setIbanValidation({ isValid: true });
   };
+  const handleIbanChange = (value) => {
+    setFormData({
+      ...formData,
+      name: value,
+    });
+  }
 
   const handleAddAccount = async () => {
+    if (formData.name && !ibanValidation.isValid) {
+      toast.error('Invalid IBAN format');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const response = await fetch('http://localhost:3001/api/accounts', {
@@ -245,14 +259,22 @@ export function AccountsTable({ accounts, userId, onAccountChange }) {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="name">Account Name</Label>
-                <Input
+                {/* <Label htmlFor="name">Account Name</Label> */}
+                {/* <Input
                   id="name"
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
-                  placeholder="e.g. Main Bank Account"
-                />
+                  placeholder="IBAN Account"
+                /> */}
+                <IbanInput
+                  value={formData.name}
+                  onChange={handleIbanChange}
+                  onValidationChange={setIbanValidation}
+                  label="IBAN Account"
+                  placeholder="RO49 AAAA 1B31 0075 9384 0000"
+                  required
+                  />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="account_type">Account Type</Label>
@@ -393,13 +415,21 @@ export function AccountsTable({ accounts, userId, onAccountChange }) {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="edit-name">Account Name</Label>
+              {/* <Label htmlFor="edit-name">Account Name</Label>
               <Input
                 id="edit-name"
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
-              />
+              /> */}
+            <IbanInput
+              value={formData.name}
+              onChange={handleIbanChange}
+              onValidationChange={setIbanValidation}
+              label="IBAN Account"
+              placeholder="RO49 AAAA 1B31 0075 9384 0000"
+              required
+            />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-account-type">Account Type</Label>

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
-
+import { NotificationChecker } from "./notification"
 export function LoginForm() {
   const [form, setForm] = useState({ email: "", password: "" })
   const router = useRouter()
@@ -55,6 +55,7 @@ export function LoginForm() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
+      <NotificationChecker />
       <Card className="w-full max-w-md">
         <CardContent className="space-y-4 p-6">
           <form onSubmit={handleSubmit} className="space-y-4">

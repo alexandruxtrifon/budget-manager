@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const handlebars = require('handlebars');
 const authMiddleware = require('../authMiddleware');
+const { logActivity } = require('../logActivity');
 
 module.exports = (pool) => {
   router.post('/analytics-pdf', authMiddleware, async (req, res) => {
@@ -37,12 +38,21 @@ module.exports = (pool) => {
         chartJsLib = '/* Chart.js could not be loaded */';
       }
 
-        await pool.query(
-      `INSERT INTO activity_logs 
-       (user_id, action, entity_type, entity_name) 
-       VALUES ($1, $2, $3, $4)`,
-      [req.user.user_id, 'generated_report', 'analytics', `${accountName} - ${timeframe} Report`]
-    );
+      await logActivity(
+        pool,
+        req.user.user_id,
+        'GENERATE_REPORT',
+        'ANALYTICS',
+        `${accountName} - ${timeframe} Report`,
+        {
+          timeframe,
+          startDate,
+          endDate,
+          currency,
+          ip: req.ip,
+          userAgent: req.get('User-Agent')
+        }
+      );
       const templatePath = path.join(__dirname, '../templates/analytics-report.html');
       const templateHtml = fs.readFileSync(templatePath, 'utf8');
       

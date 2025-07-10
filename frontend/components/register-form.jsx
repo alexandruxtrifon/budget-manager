@@ -5,12 +5,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { Progress } from "@/components/ui/progress"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext } from "@/components/ui/carousel"
 import { Loader2 } from "lucide-react"
 import { useRef } from "react"
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+  InputOTPSeparator
+} from "@/components/ui/input-otp"
+import { Dot } from "lucide-react"
 
 // export function RegisterForm() {
 //   const [form, setForm] = useState({ email: "", password: "", full_name: "" })
@@ -183,14 +191,57 @@ export function RegisterForm() {
   const carouselRef = useRef(null)
   const [api, setApi] = useState(null)
 
+  const [timeRemaining, setTimeRemaining] = useState(120)
+  const [progress, setProgress] = useState(100)
+  const [canResend, setCanResend] = useState(false)
+
+  useEffect(() => {
+    let countdown
+    
+    if (api?.selectedScrollSnap() === 2) { // When on OTP screen
+      // Reset timer when entering OTP screen
+      setTimeRemaining(120)
+      setProgress(100)
+      setCanResend(false)
+      
+      countdown = setInterval(() => {
+        setTimeRemaining(prevTime => {
+          if (prevTime <= 1) {
+            clearInterval(countdown)
+            setCanResend(true)
+            return 0
+          }
+          
+          // Calculate progress percentage
+          const newTime = prevTime - 1
+          const newProgress = (newTime / 120) * 100
+          setProgress(newProgress)
+          
+          return newTime
+        })
+      }, 1000)
+    }
+    
+    return () => clearInterval(countdown)
+  }, [api?.selectedScrollSnap()])
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`
+  }
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })
+  }
+  
+  const handleOtpChange = (value) => {
+    setOtp(value)
   }
 
   const handleSubmitInitialForm = async (e) => {
     e.preventDefault()
     setIsSubmitting(true)
-    console.log("Form submitted", form)
+    //console.log("Form submitted", form)
     toast("Submitting registration...")
 
     try {
@@ -233,6 +284,7 @@ export function RegisterForm() {
     } catch (error) {
       console.error("Registration error:", error)
       toast.error("Registration failed. Please try again.")
+      setCanResend(true)
     } finally {
       setIsSubmitting(false)
     }
@@ -257,6 +309,7 @@ export function RegisterForm() {
       if (res.ok) {
         toast.success("Email verified successfully!")
         router.push("/login")
+        //router.push('/dashboard')
       } else {
         toast.error(data.error || "Invalid OTP. Please try again.")
       }
@@ -272,6 +325,9 @@ export function RegisterForm() {
     if (!userId) return
     
     try {
+
+      setCanResend(false)
+
       const res = await fetch("http://localhost:3001/api/users/resend-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -287,7 +343,11 @@ export function RegisterForm() {
           console.log("Updated notification_id in localStorage:", data.notification_id);
         }
         toast.success("OTP resent to your email")
-
+        setTimeout(() => {
+          // Reset timer after 3 seconds
+          setTimeRemaining(120)
+          setProgress(100)
+        }, 3000)
       } 
       
       else {
@@ -303,7 +363,17 @@ export function RegisterForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-2xl">Create an account</CardTitle>
+                <div className="flex flex-col items-center mb-2">
+          {/* Logo */}
+          <div className="h-12 w-12 bg-primary rounded-full flex items-center justify-center mb-4">
+            <span className="text-primary-foreground text-xl font-bold">B</span>
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight">Create account</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Get started with Budget Manager
+          </p>
+        </div>
+        {/* <CardTitle className="text-2xl">Create an account</CardTitle> */}
       </CardHeader>
       <CardContent>
         {/* <Carousel currentIndex={carouselIndex} setCurrentIndex={setCarouselIndex}> */}
@@ -320,33 +390,57 @@ export function RegisterForm() {
           {/* Step 1: Registration form */}
           <form onSubmit={handleSubmitInitialForm} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" name="email" type="email" required onChange={handleChange} />
+              <Label htmlFor="email" className="text-sm font-medium">Email address</Label>
+              <Input
+              id="email"
+              name="email" 
+              type="email"
+              autoComplete="email"
+              placeholder="" 
+              className="w-full"
+              required
+              onChange={handleChange} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="full_name">Full Name</Label>
-              <Input id="full_name" name="full_name" type="text" required onChange={handleChange} />
+              <Label htmlFor="full_name" className="text-sm font-medium">Full Name</Label>
+              <Input 
+              id="full_name" 
+              name="full_name" 
+              type="text" 
+              className="w-full" 
+              required
+              onChange={handleChange} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" name="password" type="password" required onChange={handleChange} />
+              <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+                  <Input 
+                    id="password" 
+                    name="password" 
+                    type="password" 
+                    autoComplete="new-password"
+                    placeholder=""
+                    className="w-full" 
+                    required 
+                    onChange={handleChange} 
+                  />
             </div>
             <Button 
               type="submit" 
-              className="w-full"
+              className="w-full py-2 h-11"
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Registering...' : 'Register'}
+              {isSubmitting ? 'Creating account...' : 'Create account'}
             </Button>
-            <div className="mt-4 text-center text-sm">
-              Already have an account? <Link href="/login" className="underline">Login</Link>
+            <div className="mt-6 text-center text-sm">
+              <span className="text-muted-foreground">Already have an account? </span>
+              <Link href="/login" className="text-primary font-medium hover:underline">Login</Link>
             </div>
           </form>
         </CarouselItem>
 
         <CarouselItem>
           {/* Step 2: Email sent confirmation */}
-          <div className="py-8 text-center space-y-6">
+          {/* <div className="py-8 text-center space-y-6">
             <Loader2 className="animate-spin h-12 w-12 mx-auto text-primary" />
             <div className="space-y-2">
               <h3 className="text-xl font-medium">Sending verification code</h3>
@@ -354,44 +448,91 @@ export function RegisterForm() {
                 We're sending a one-time verification code to {form.email}
               </p>
             </div>
+          </div> */}
+          <div className="py-8 text-center space-y-6">
+            <div className="flex justify-center">
+              <Loader2 className="animate-spin h-12 w-12 text-primary" />
+            </div>
+            <div className="space-y-3">
+              <h3 className="text-xl font-semibold">Sending verification code</h3>
+              <p className="text-muted-foreground">
+                We're sending a verification code to:
+              </p>
+              <p className="font-medium">{form.email}</p>
+            </div>
           </div>
         </CarouselItem>
 
+        {/* Step 3: OTP verification */}
         <CarouselItem>
-          {/* Step 3: OTP verification */}
+          <div className="py-3">
+            <h3 className="text-lg font-semibold mb-2 text-center">Email verification</h3>
+            <p className="text-sm text-muted-foreground mb-6 text-center">
+              Enter the 6-digit code we sent to {form.email}
+            </p>
           <form onSubmit={handleVerifyOtp} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="otp">Enter Verification Code</Label>
-              <p className="text-sm text-muted-foreground mb-2">
+            <div className="space-y-4">
+              {/* <Label htmlFor="otp" className="text-sm font-medium">Enter Verification Code</Label>
+              {/* <p className="text-sm text-muted-foreground mb-2">
                 We've sent a 6-digit code to {form.email}
-              </p>
-              <Input 
+              </p> */}
+              {/* <Input 
                 id="otp" 
                 name="otp"
                 placeholder="000000" 
                 maxLength={6}
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
-                className="text-center text-lg font-mono tracking-wider"
-              />
+                className="text-center text-lg font-mono tracking-wider py-5"
+              /> */}
+        <div className="space-y-4 flex flex-col items-center">
+        <InputOTP
+          maxLength={6}
+          value={otp}
+          onChange={(value) => setOtp(value)}>
+            <InputOTPGroup>
+              <InputOTPSlot index={0} />
+              <InputOTPSlot index={1} />
+              <InputOTPSlot index={2} />
+              </InputOTPGroup>
+              <InputOTPSeparator />
+            <InputOTPGroup>
+              <InputOTPSlot index={3} />
+              <InputOTPSlot index={4} />
+              <InputOTPSlot index={5} />
+            </InputOTPGroup>
+        </InputOTP>
+        </div>
+            </div>
+                        {/* Progress Bar with Countdown Timer */}
+            <div className="space-y-3">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">Request new code in</span>
+                <span className="font-medium">{formatTime(timeRemaining)}</span>
+              </div>
+              <Progress value={progress} className="h-2" />
             </div>
             <Button 
               type="submit" 
-              className="w-full"
+              className="w-full py-2 h-11"
               disabled={isSubmitting || otp.length !== 6}
             >
-              {isSubmitting ? 'Verifying...' : 'Verify Email'}
+              {isSubmitting ? 'Verifying...' : 'Verify and continue'}
             </Button>
             <div className="text-center">
               <Button 
                 variant="link" 
                 type="button"
                 onClick={handleResendOtp}
+                disabled={!canResend}
+                className={`font-medium ${canResend ? 'text-primary' : 'text-muted-foreground'}`}
               >
-                Didn't receive code? Resend
+                {canResend ? "Resend code" : "Please wait to resend code"}
+                {/* Didn't receive the code? Resend */}
               </Button>
             </div>
           </form>
+          </div>
         </CarouselItem>
         </CarouselContent>
         </Carousel>

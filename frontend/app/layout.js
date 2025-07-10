@@ -1,6 +1,11 @@
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import Sidebar from "@/components/Sidebar";
+import { Geist } from "next/font/google";
+
+// import { GeistSans } from "geist/font/sans"
+// import { GeistMono } from "geist/font/mono"
+// use local geist only if cdn is not available
+// use ^^ npm install geist
+import "./globals.css"
+import Sidebar from "@/components/Sidebar"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { NotificationChecker } from "@/components/notification";
@@ -8,11 +13,22 @@ const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
 });
+//import { Toaster } from "@/components/ui/toaster"
+//import { Toaster } from "sonner"
+import { NavigationProvider } from "@/components/navigation-provider"
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// const geistSans = GeistSans;
+// const geistMono = GeistMono;
+
+// const geistSans = Geist({
+//   variable: "--font-geist-sans",
+//   subsets: ["latin"],
+// });
+
+// const geistMono = Geist_Mono({
+//   variable: "--font-geist-mono",
+//   subsets: ["latin"],
+// });
 
 export const metadata = {
   title: "Create Next App",
@@ -21,7 +37,8 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
     return (
-    <html lang="en" suppressHydrationWarning className="dark">
+    // <html lang="en" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} dark`}>
+    <html lang="en" suppressHydrationWarning className={`${geistSans.variable} dark`}>
       <body>
         
           <ThemeProvider
@@ -30,9 +47,11 @@ export default function RootLayout({ children }) {
             enableSystem
             disableTransitionOnChange
           >
+            <NavigationProvider>
             <NotificationChecker />
             {children}
-            <Toaster />
+            <Toaster/>
+            </NavigationProvider>
           </ThemeProvider>
       </body>
     </html>

@@ -56,10 +56,14 @@ export const LoadingScreen = ({
   variant = "default"
 }) => {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
-      <Spinner size={size} variant={variant} label={message} />
-      {message && <p className="text-muted-foreground text-sm">{message}</p>}
-    </div>
+    // <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+    //   <Spinner size={size} variant={variant} label={message} />
+    //   {message && <p className="text-muted-foreground text-sm">{message}</p>}
+    // </div>
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-[2px]">
+    <Spinner size={size} variant={variant} label={message} />
+    {message && <p className="text-muted-foreground text-sm mt-4">{message}</p>}
+  </div>
   );
 };
 

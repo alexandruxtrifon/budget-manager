@@ -1,5 +1,9 @@
-import { GeistSans } from "geist/font/sans"
-import { GeistMono } from "geist/font/mono"
+import { Geist } from "next/font/google";
+
+// import { GeistSans } from "geist/font/sans"
+// import { GeistMono } from "geist/font/mono"
+// use local geist only if cdn is not available
+// use ^^ npm install geist
 import "./globals.css"
 import Sidebar from "@/components/Sidebar"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -10,7 +14,7 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 //import { Toaster } from "@/components/ui/toaster"
-import { toast, Toaster } from "sonner"
+//import { Toaster } from "sonner"
 import { NavigationProvider } from "@/components/navigation-provider"
 
 // const geistSans = GeistSans;
@@ -21,10 +25,10 @@ import { NavigationProvider } from "@/components/navigation-provider"
 //   subsets: ["latin"],
 // });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// const geistMono = Geist_Mono({
+//   variable: "--font-geist-mono",
+//   subsets: ["latin"],
+// });
 
 export const metadata = {
   title: "Create Next App",
@@ -33,7 +37,8 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
     return (
-    <html lang="en" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} dark`}>
+    // <html lang="en" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} dark`}>
+    <html lang="en" suppressHydrationWarning className={`${geistSans.variable} dark`}>
       <body>
         
           <ThemeProvider

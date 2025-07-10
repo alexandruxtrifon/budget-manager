@@ -96,7 +96,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImportDialog } from "@/components/import-dialog";
 
 // Create a separate component for the drag handle
-
 export const transactionSchema = z.object({
   transaction_id: z.number(),
   user_id: z.number(),
@@ -441,6 +440,7 @@ export function DataTable({
   accounts = [],
   userId,
   onImportComplete,
+  isStandalonePage = false,
 }) {
   // console.log("DataTable received data:", initialData?.length || 0, "transactions");
   // console.log("DataTable received accounts:", accounts?.length || 0, "accounts");
@@ -467,7 +467,7 @@ export function DataTable({
   
   React.useEffect(() => {
     if (initialData) {
-      console.log("Updating data from new props:", initialData.length);
+      //console.log("Updating data from new props:", initialData.length);
       setData(initialData);
     }
   }, [initialData]);
@@ -517,6 +517,17 @@ export function DataTable({
   }
 
   return (
+    <div className={`${isStandalonePage ? '' : ''}`}>
+    {/* If this is not the standalone page, show the header */}
+    {!isStandalonePage && (
+      <div className="flex items-center justify-between pb-4">
+        <h2 className="text-xl font-bold tracking-tight px-4 lg:px-6">Recent Transactions</h2>
+        <div className="flex items-center gap-2">
+          {/* ... import button and others */}
+        </div>
+      </div>
+    )}
+    
     <Tabs
       defaultValue="outline"
       className="w-full flex-col justify-start gap-6"
@@ -525,7 +536,7 @@ export function DataTable({
         <Label htmlFor="view-selector" className="sr-only">
           View
         </Label>
-        <Select defaultValue="outline">
+        {/* <Select defaultValue="outline">
           <SelectTrigger
             className="flex w-fit @4xl/main:hidden"
             size="sm"
@@ -539,8 +550,8 @@ export function DataTable({
             <SelectItem value="key-personnel">Key Personnel</SelectItem>
             <SelectItem value="focus-documents">Focus Documents</SelectItem>
           </SelectContent>
-        </Select>
-        <TabsList className="**:data-[slot=badge]:bg-muted-foreground/30 hidden **:data-[slot=badge]:size-5 **:data-[slot=badge]:rounded-full **:data-[slot=badge]:px-1 @4xl/main:flex">
+        </Select> */}
+        {/* <TabsList className="**:data-[slot=badge]:bg-muted-foreground/30 hidden **:data-[slot=badge]:size-5 **:data-[slot=badge]:rounded-full **:data-[slot=badge]:px-1 @4xl/main:flex">
           <TabsTrigger value="outline">Outline</TabsTrigger>
           <TabsTrigger value="past-performance">
             Past Performance <Badge variant="secondary">3</Badge>
@@ -549,7 +560,7 @@ export function DataTable({
             Key Personnel <Badge variant="secondary">2</Badge>
           </TabsTrigger>
           <TabsTrigger value="focus-documents">Focus Documents</TabsTrigger>
-        </TabsList>
+        </TabsList> */}
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -744,6 +755,7 @@ export function DataTable({
         <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
       </TabsContent>
     </Tabs>
+    </div>
   );
 }
 

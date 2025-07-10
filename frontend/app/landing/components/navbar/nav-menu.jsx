@@ -17,12 +17,12 @@ import { ScrollLink } from "../scroll-link";
       <NavigationMenuList className="gap-6 space-x-0 data-[orientation=vertical]:flex-col data-[orientation=vertical]:items-start">
         <NavigationMenuItem>
           <NavigationMenuLink asChild>
-            <Link href="#features">Features</Link>
+            <ScrollLink href="#features">Features</ScrollLink>
           </NavigationMenuLink>
         </NavigationMenuItem>
         <NavigationMenuItem>
           <NavigationMenuLink asChild>
-            <Link href="#pricing">Pricing</Link>
+            <ScrollLink href="#pricing">Pricing</ScrollLink>
           </NavigationMenuLink>
         </NavigationMenuItem>
         <NavigationMenuItem>

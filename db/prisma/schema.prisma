@@ -1,0 +1,184 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model
+model User {
+  user_id             Int      @id @default(autoincrement())
+  email               String   @unique
+  password_hash       String
+  full_name           String?
+  language_preference String   @default("en") @db.VarChar(10)
+  role                String   @default("user") @db.VarChar(20)
+  created_at          DateTime @default(now()) @db.Timestamptz()
+  updated_at          DateTime @default(now()) @db.Timestamptz()
+
+  accounts            Account[]
+  categories          Category[]
+  classification_rules ClassificationRule[]
+  transactions        Transaction[]
+  budgets             Budget[]
+  objectives          Objective[]
+  recurring_items     RecurringItem[]
+  notifications       Notification[]
+  report_settings     ReportSetting[]
+}
+
+// Account model
+model Account {
+  account_id       Int      @id @default(autoincrement())
+  user_id          Int
+  name             String   @db.VarChar(100)
+  account_type     String   @db.VarChar(20)
+  currency         String   @default("RON") @db.Char(3)
+  initial_balance  Decimal  @default(0) @db.Decimal(14, 2)
+  current_balance  Decimal  @default(0) @db.Decimal(14, 2)
+  created_at       DateTime @default(now()) @db.Timestamptz()
+  updated_at       DateTime @default(now()) @db.Timestamptz()
+
+  user              User     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  transactions      Transaction[]
+  recurring_items   RecurringItem[]
+}
+
+// Category model
+model Category {
+  category_id        Int      @id @default(autoincrement())
+  user_id            Int
+  name               String   @db.VarChar(100)
+  type               String   @db.VarChar(10)
+  parent_category_id Int?
+  created_at         DateTime @default(now()) @db.Timestamptz()
+  updated_at         DateTime @default(now()) @db.Timestamptz()
+
+  user                User      @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  parent_category     Category? @relation("CategoryToCategory", fields: [parent_category_id], references: [category_id], onDelete: SetNull)
+  child_categories    Category[] @relation("CategoryToCategory")
+  classification_rules ClassificationRule[]
+  transactions        Transaction[]
+  budgets             Budget[]
+  recurring_items     RecurringItem[]
+}
+
+// Classification Rule model
+model ClassificationRule {
+  rule_id       Int      @id @default(autoincrement())
+  user_id       Int
+  keyword       String   @db.VarChar(255)
+  category_id   Int
+  match_type    String   @default("contains") @db.VarChar(20)
+  active        Boolean  @default(true)
+  created_at    DateTime @default(now()) @db.Timestamptz()
+  updated_at    DateTime @default(now()) @db.Timestamptz()
+
+  user          User     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  category      Category @relation(fields: [category_id], references: [category_id], onDelete: Cascade)
+}
+
+// Transaction model
+model Transaction {
+  transaction_id   Int      @id @default(autoincrement())
+  user_id          Int
+  account_id       Int
+  amount           Decimal  @db.Decimal(14, 2)
+  currency         String   @default("EUR") @db.Char(3)
+  transaction_type String   @db.VarChar(20)
+  category_id      Int?
+  description      String?
+  transaction_date DateTime @db.Date
+  created_at       DateTime @default(now()) @db.Timestamptz()
+  updated_at       DateTime @default(now()) @db.Timestamptz()
+
+  user             User     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  account          Account  @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
+  category         Category? @relation(fields: [category_id], references: [category_id], onDelete: SetNull)
+}
+
+// Budget model
+model Budget {
+  budget_id     Int      @id @default(autoincrement())
+  user_id       Int
+  category_id   Int
+  amount        Decimal  @db.Decimal(14, 2)
+  period_start  DateTime @db.Date
+  period_end    DateTime @db.Date
+  created_at    DateTime @default(now()) @db.Timestamptz()
+  updated_at    DateTime @default(now()) @db.Timestamptz()
+
+  user          User     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  category      Category @relation(fields: [category_id], references: [category_id], onDelete: Cascade)
+
+  @@unique([user_id, category_id, period_start, period_end])
+}
+
+// Objective model
+model Objective {
+  objective_id   Int      @id @default(autoincrement())
+  user_id        Int
+  name           String   @db.VarChar(255)
+  target_amount  Decimal  @db.Decimal(14, 2)
+  current_amount Decimal  @default(0) @db.Decimal(14, 2)
+  due_date       DateTime? @db.Date
+  created_at     DateTime @default(now()) @db.Timestamptz()
+  updated_at     DateTime @default(now()) @db.Timestamptz()
+
+  user           User     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+}
+
+// Recurring Item model
+model RecurringItem {
+  recurring_id Int      @id @default(autoincrement())
+  user_id      Int
+  account_id   Int
+  name         String   @db.VarChar(255)
+  amount       Decimal  @db.Decimal(14, 2)
+  currency     String   @default("EUR") @db.Char(3)
+  frequency    String   @db.VarChar(20)
+  next_date    DateTime @db.Date
+  type         String   @db.VarChar(20)
+  category_id  Int?
+  active       Boolean  @default(true)
+  created_at   DateTime @default(now()) @db.Timestamptz()
+  updated_at   DateTime @default(now()) @db.Timestamptz()
+
+  user         User     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  account      Account  @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
+  category     Category? @relation(fields: [category_id], references: [category_id])
+}
+
+// Notification model
+model Notification {
+  notification_id Int      @id @default(autoincrement())
+  user_id         Int
+  type            String   @db.VarChar(50)
+  payload         Json?    @db.JsonB
+  is_sent         Boolean  @default(false)
+  created_at      DateTime @default(now()) @db.Timestamptz()
+
+  user            User     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+}
+
+// Report Setting model
+model ReportSetting {
+  report_id    Int       @id @default(autoincrement())
+  user_id      Int
+  report_type  String    @db.VarChar(50)
+  frequency    String    @db.VarChar(20)
+  last_sent    DateTime? @db.Timestamptz()
+  format       String    @default("csv") @db.VarChar(10)
+  created_at   DateTime  @default(now()) @db.Timestamptz()
+  updated_at   DateTime  @default(now()) @db.Timestamptz()
+
+  user         User      @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+}

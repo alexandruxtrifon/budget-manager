@@ -14,6 +14,7 @@ import {
 import { ModeToggle } from "@/components/ModeToggle"
 import { LoadingScreen } from "@/components/ui/spinner"
 import { NotificationChecker } from "@/components/notification";
+//import { useNavigation } from '@/components/navigation-provider';
 
 export default function Page() {
   const router = useRouter();
@@ -21,6 +22,13 @@ export default function Page() {
   const [user, setUser] = useState(null);
   const [accounts, setAccounts] = useState([]);
   const [transactions, setTransactions] = useState([]);
+  // const { startNavigation, isPending } = useNavigation(); // Use the navigation hook
+
+  // const navigateToPage = (path) => {
+  //   startNavigation(() => {
+  //     router.push(path);
+  //   });
+  // };
 
   const handleUserUpdate = (updatedUser) => {
     console.log('Dashboard handleUserUpdate called with:', updatedUser);
@@ -71,7 +79,7 @@ export default function Page() {
           ...parsedUser,
           name: parsedUser.full_name,
           email: parsedUser.email,
-          avatar: "/avatars/default.png" // Provide a default avatar
+          //avatar: "/avatars/default.png" // Provide a default avatar
         });
       } catch (error) {
         console.error("Failed to parse user data from localStorage", error);

@@ -65,9 +65,9 @@ export function AccountsTable({ accounts, userId, onAccountChange }) {
 
   const accountTypes = [
     { value: 'bank', label: 'Bank Account', icon: IconBuildingBank },
-    { value: 'card', label: 'Credit/Debit Card', icon: IconCreditCard },
-    { value: 'cash', label: 'Cash', icon: IconCash },
-    { value: 'other', label: 'Other', icon: IconCurrencyEuro },
+    // { value: 'card', label: 'Credit/Debit Card', icon: IconCreditCard },
+    // { value: 'cash', label: 'Cash', icon: IconCash },
+    // { value: 'other', label: 'Other', icon: IconCurrencyEuro },
   ];
 
   const currencies = [
@@ -97,7 +97,7 @@ export function AccountsTable({ accounts, userId, onAccountChange }) {
       name: '',
       account_type: 'bank',
       currency: 'RON',
-      initial_balance: 0,
+      //initial_balance: 0,
     });
     setIbanValidation({ isValid: true });
   };
@@ -151,7 +151,7 @@ export function AccountsTable({ accounts, userId, onAccountChange }) {
       name: account.name,
       account_type: account.account_type,
       currency: account.currency,
-      initial_balance: parseFloat(account.initial_balance),
+      //initial_balance: parseFloat(account.initial_balance),
     });
     setIsEditDialogOpen(true);
   };
@@ -317,7 +317,7 @@ export function AccountsTable({ accounts, userId, onAccountChange }) {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid gap-2">
+              {/* <div className="grid gap-2">
                 <Label htmlFor="initial_balance">Initial Balance</Label>
                 <Input
                   id="initial_balance"
@@ -327,7 +327,7 @@ export function AccountsTable({ accounts, userId, onAccountChange }) {
                   value={formData.initial_balance}
                   onChange={handleInputChange}
                 />
-              </div>
+              </div> */}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
@@ -346,7 +346,7 @@ export function AccountsTable({ accounts, userId, onAccountChange }) {
               <TableHead>Account</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Currency</TableHead>
-              <TableHead className="text-right">Initial Balance</TableHead>
+              {/* <TableHead className="text-right">Initial Balance</TableHead> */}
               <TableHead className="text-right">Current Balance</TableHead>
               <TableHead></TableHead>
             </TableRow>
@@ -369,9 +369,9 @@ export function AccountsTable({ accounts, userId, onAccountChange }) {
                     </div>
                   </TableCell>
                   <TableCell>{account.currency}</TableCell>
-                  <TableCell className="text-right">
+                  {/* <TableCell className="text-right">
                     {formatCurrency(account.initial_balance, account.currency)}
-                  </TableCell>
+                  </TableCell> */}
                   <TableCell className="text-right">
                     {formatCurrency(account.current_balance, account.currency)}
                   </TableCell>
@@ -472,7 +472,7 @@ export function AccountsTable({ accounts, userId, onAccountChange }) {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-2">
+            {/* <div className="grid gap-2">
               <Label htmlFor="edit-initial-balance">Initial Balance</Label>
               <Input
                 id="edit-initial-balance"
@@ -482,7 +482,7 @@ export function AccountsTable({ accounts, userId, onAccountChange }) {
                 value={formData.initial_balance}
                 onChange={handleInputChange}
               />
-            </div>
+            </div> */}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>

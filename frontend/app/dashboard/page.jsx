@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppSidebar } from "@/components/app-sidebar"
 import { ChartAreaInteractive } from "@/components/chart-area-interactive"
-import { DataTable } from "@/components/data-table"
+//import { DataTable } from "@/components/data-table"
+import { TransactionsTable } from '@/components/dashbaord-table'
 import { SectionCards } from "@/components/section-cards"
 import { SiteHeader } from "@/components/site-header"
 import {
@@ -22,6 +23,8 @@ export default function Page() {
   const [user, setUser] = useState(null);
   const [accounts, setAccounts] = useState([]);
   const [transactions, setTransactions] = useState([]);
+  const [timeRange, setTimeRange] = useState("30d"); // Add this line to manage time range
+
   // const { startNavigation, isPending } = useNavigation(); // Use the navigation hook
 
   // const navigateToPage = (path) => {
@@ -119,15 +122,18 @@ export default function Page() {
               <SectionCards 
                 transactions={transactions} 
                 accounts={accounts} 
+                timeRange={timeRange}
                 userId={user.user_id}
               />
               <div className="px-4 lg:px-6">
                 <ChartAreaInteractive 
                   transactions={transactions} 
                   currency={accounts[0]?.currency || "EUR"}
+                  timeRange={timeRange}
+                  onTimeRangeChange={setTimeRange}
                 />
               </div>
-            <DataTable 
+            <TransactionsTable
               data={transactions || []} 
               accounts={accounts || []} 
               userId={user.user_id}

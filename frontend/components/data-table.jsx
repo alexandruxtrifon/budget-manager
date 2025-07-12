@@ -346,6 +346,21 @@ const columns = [
     );
   },
   },
+    {
+    accessorKey: "category_name",
+    header: "Category",
+    cell: ({ row }) => {
+      const categoryName = row.getValue("category_name");
+      
+      return categoryName ? (
+        <Badge variant="outline">{categoryName}</Badge>
+      ) : (
+        <Badge variant="outline" className="text-muted-foreground">
+          Uncategorized
+        </Badge>
+      );
+    },
+  },
   {
     accessorKey: "transaction_type",
     header: "Type",

@@ -15,6 +15,7 @@ const createImportRoutes = require('./routes/import');
 const createLogsRoutes = require('./routes/logs');
 const createReportsRoutes = require('./routes/reports');
 const createForecastRoutes = require('./routes/forecast');
+const createCategoriesRoutes = require('./routes/categories');
 
 // const pool = new Pool({
 //   user: process.env.DB_USER || 'postgres',
@@ -39,6 +40,7 @@ app.use('/api/import', createImportRoutes(pool));
 app.use('/api/logs', createLogsRoutes(pool));
 app.use('/api/reports', createReportsRoutes(pool));
 app.use('/api/forecast', createForecastRoutes(pool));
+app.use('/api/categories', createCategoriesRoutes(pool));
 
 app.get('/ping', (req, res) => {
   res.send('pong');

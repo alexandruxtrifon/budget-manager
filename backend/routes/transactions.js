@@ -17,9 +17,10 @@ module.exports = (pool) => {
       }
 
       const result = await pool.query(
-        `SELECT t.*, a.name as account_name 
+        `SELECT t.*, a.name as account_name, c.name as category_name
          FROM transactions t
          JOIN accounts a ON t.account_id = a.account_id
+         LEFT JOIN categories c on t.category_id = c.category_id
          WHERE t.user_id = $1
          ORDER BY t.transaction_date DESC`,
         [userId]

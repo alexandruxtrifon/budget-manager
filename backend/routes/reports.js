@@ -288,24 +288,24 @@ router.post('/spending-analysis', authMiddleware, async (req, res) => {
     });
     
     // Merchant frequency analysis
-    const merchants = {};
+    const categories = {};
     expenses.forEach(t => {
-      const merchant = t.description;
-      if (!merchants[merchant]) {
-        merchants[merchant] = { count: 0, total: 0 };
+      const categoryName = t.category_name || 'Uncategorized';
+      if (!categories[categoryName]) {
+        categories[categoryName] = { count: 0, total: 0 };
       }
-      merchants[merchant].count += 1;
-      merchants[merchant].total += parseFloat(t.amount);
+      categories[categoryName].count += 1;
+      categories[categoryName].total += parseFloat(t.amount);
     });
-    
-    const merchantFrequency = Object.entries(merchants)
+
+    const merchantFrequency = Object.entries(categories)
       .map(([name, data]) => ({
         name,
         count: data.count,
         total: data.total
       }))
       .sort((a, b) => b.count - a.count)
-      .slice(0, 10); // Top 10 merchants
+      .slice(0, 10); // Top 10 categories
     
     // Monthly spending trends
     const monthlyData = {};

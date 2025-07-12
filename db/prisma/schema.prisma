@@ -13,17 +13,16 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// User model
 model User {
-  user_id             Int      @id @default(autoincrement())
-  email               String   @unique
-  password_hash       String
-  full_name           String?
-  language_preference String   @default("en") @db.VarChar(10)
-  role                String   @default("user") @db.VarChar(20)
-  created_at          DateTime @default(now()) @db.Timestamptz()
-  updated_at          DateTime @default(now()) @db.Timestamptz()
-
+  user_id             Int                  @id @default(autoincrement())
+  email               String               @unique @db.VarChar(255)
+  password_hash       String               @db.VarChar(255)
+  full_name           String?              @db.VarChar(255)
+  language_preference String               @default("en") @db.VarChar(10)
+  role                String               @default("user") @db.VarChar(20)
+  created_at          DateTime             @default(now()) @db.Timestamptz()
+  updated_at          DateTime             @default(now()) @db.Timestamptz()
+  
   accounts            Account[]
   categories          Category[]
   classification_rules ClassificationRule[]
@@ -33,96 +32,101 @@ model User {
   recurring_items     RecurringItem[]
   notifications       Notification[]
   report_settings     ReportSetting[]
+
+  @@map("users")
 }
 
-// Account model
 model Account {
-  account_id       Int      @id @default(autoincrement())
-  user_id          Int
-  name             String   @db.VarChar(100)
-  account_type     String   @db.VarChar(20)
-  currency         String   @default("RON") @db.Char(3)
-  initial_balance  Decimal  @default(0) @db.Decimal(14, 2)
-  current_balance  Decimal  @default(0) @db.Decimal(14, 2)
-  created_at       DateTime @default(now()) @db.Timestamptz()
-  updated_at       DateTime @default(now()) @db.Timestamptz()
+  account_id      Int          @id @default(autoincrement())
+  user_id         Int
+  name            String       @db.VarChar(100)
+  account_type    String       @db.VarChar(20)
+  currency        String       @default("RON") @db.Char(3)
+  initial_balance Decimal      @default(0) @db.Decimal(14, 2)
+  current_balance Decimal      @default(0) @db.Decimal(14, 2)
+  created_at      DateTime     @default(now()) @db.Timestamptz()
+  updated_at      DateTime     @default(now()) @db.Timestamptz()
+  
+  user            User         @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  transactions    Transaction[]
+  recurring_items RecurringItem[]
 
-  user              User     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  transactions      Transaction[]
-  recurring_items   RecurringItem[]
+  @@map("accounts")
 }
 
-// Category model
 model Category {
-  category_id        Int      @id @default(autoincrement())
-  user_id            Int
-  name               String   @db.VarChar(100)
-  type               String   @db.VarChar(10)
+  category_id       Int                 @id @default(autoincrement())
+  user_id           Int
+  name              String              @db.VarChar(100)
+  type              String              @db.VarChar(10)
   parent_category_id Int?
-  created_at         DateTime @default(now()) @db.Timestamptz()
-  updated_at         DateTime @default(now()) @db.Timestamptz()
-
-  user                User      @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  parent_category     Category? @relation("CategoryToCategory", fields: [parent_category_id], references: [category_id], onDelete: SetNull)
-  child_categories    Category[] @relation("CategoryToCategory")
+  created_at        DateTime            @default(now()) @db.Timestamptz()
+  updated_at        DateTime            @default(now()) @db.Timestamptz()
+  
+  user              User                @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  parent_category   Category?           @relation("CategoryToCategory", fields: [parent_category_id], references: [category_id], onDelete: SetNull)
+  subcategories     Category[]          @relation("CategoryToCategory")
+  transactions      Transaction[]
   classification_rules ClassificationRule[]
-  transactions        Transaction[]
-  budgets             Budget[]
-  recurring_items     RecurringItem[]
+  budgets           Budget[]
+  recurring_items   RecurringItem[]
+
+  @@map("categories")
 }
 
-// Classification Rule model
 model ClassificationRule {
-  rule_id       Int      @id @default(autoincrement())
-  user_id       Int
-  keyword       String   @db.VarChar(255)
-  category_id   Int
-  match_type    String   @default("contains") @db.VarChar(20)
-  active        Boolean  @default(true)
-  created_at    DateTime @default(now()) @db.Timestamptz()
-  updated_at    DateTime @default(now()) @db.Timestamptz()
+  rule_id     Int      @id @default(autoincrement())
+  user_id     Int
+  keyword     String   @db.VarChar(255)
+  category_id Int
+  match_type  String   @default("contains") @db.VarChar(20)
+  active      Boolean  @default(true)
+  created_at  DateTime @default(now()) @db.Timestamptz()
+  updated_at  DateTime @default(now()) @db.Timestamptz()
+  
+  user        User     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  category    Category @relation(fields: [category_id], references: [category_id], onDelete: Cascade)
 
-  user          User     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  category      Category @relation(fields: [category_id], references: [category_id], onDelete: Cascade)
+  @@map("classification_rules")
 }
 
-// Transaction model
 model Transaction {
   transaction_id   Int      @id @default(autoincrement())
   user_id          Int
   account_id       Int
   amount           Decimal  @db.Decimal(14, 2)
-  currency         String   @default("EUR") @db.Char(3)
+  currency         String   @default("RON") @db.Char(3)
   transaction_type String   @db.VarChar(20)
   category_id      Int?
-  description      String?
+  description      String?  @db.Text
   transaction_date DateTime @db.Date
   created_at       DateTime @default(now()) @db.Timestamptz()
   updated_at       DateTime @default(now()) @db.Timestamptz()
-
+  
   user             User     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
   account          Account  @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
   category         Category? @relation(fields: [category_id], references: [category_id], onDelete: SetNull)
+
+  @@map("transactions")
 }
 
-// Budget model
 model Budget {
-  budget_id     Int      @id @default(autoincrement())
-  user_id       Int
-  category_id   Int
-  amount        Decimal  @db.Decimal(14, 2)
-  period_start  DateTime @db.Date
-  period_end    DateTime @db.Date
-  created_at    DateTime @default(now()) @db.Timestamptz()
-  updated_at    DateTime @default(now()) @db.Timestamptz()
-
-  user          User     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
-  category      Category @relation(fields: [category_id], references: [category_id], onDelete: Cascade)
+  budget_id    Int      @id @default(autoincrement())
+  user_id      Int
+  category_id  Int
+  amount       Decimal  @db.Decimal(14, 2)
+  period_start DateTime @db.Date
+  period_end   DateTime @db.Date
+  created_at   DateTime @default(now()) @db.Timestamptz()
+  updated_at   DateTime @default(now()) @db.Timestamptz()
+  
+  user         User     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  category     Category @relation(fields: [category_id], references: [category_id], onDelete: Cascade)
 
   @@unique([user_id, category_id, period_start, period_end])
+  @@map("budgets")
 }
 
-// Objective model
 model Objective {
   objective_id   Int      @id @default(autoincrement())
   user_id        Int
@@ -132,11 +136,12 @@ model Objective {
   due_date       DateTime? @db.Date
   created_at     DateTime @default(now()) @db.Timestamptz()
   updated_at     DateTime @default(now()) @db.Timestamptz()
-
+  
   user           User     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  @@map("objectives")
 }
 
-// Recurring Item model
 model RecurringItem {
   recurring_id Int      @id @default(autoincrement())
   user_id      Int
@@ -151,34 +156,38 @@ model RecurringItem {
   active       Boolean  @default(true)
   created_at   DateTime @default(now()) @db.Timestamptz()
   updated_at   DateTime @default(now()) @db.Timestamptz()
-
+  
   user         User     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
   account      Account  @relation(fields: [account_id], references: [account_id], onDelete: Cascade)
   category     Category? @relation(fields: [category_id], references: [category_id])
+
+  @@map("recurring_items")
 }
 
-// Notification model
 model Notification {
   notification_id Int      @id @default(autoincrement())
   user_id         Int
   type            String   @db.VarChar(50)
   payload         Json?    @db.JsonB
-  is_sent         Boolean  @default(false)
+  is_read         Boolean  @default(false)
   created_at      DateTime @default(now()) @db.Timestamptz()
-
+  
   user            User     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  @@map("notifications")
 }
 
-// Report Setting model
 model ReportSetting {
-  report_id    Int       @id @default(autoincrement())
-  user_id      Int
-  report_type  String    @db.VarChar(50)
-  frequency    String    @db.VarChar(20)
-  last_sent    DateTime? @db.Timestamptz()
-  format       String    @default("csv") @db.VarChar(10)
-  created_at   DateTime  @default(now()) @db.Timestamptz()
-  updated_at   DateTime  @default(now()) @db.Timestamptz()
+  report_id   Int       @id @default(autoincrement())
+  user_id     Int
+  report_type String    @db.VarChar(50)
+  frequency   String    @db.VarChar(20)
+  last_sent   DateTime? @db.Timestamptz()
+  format      String    @default("csv") @db.VarChar(10)
+  created_at  DateTime  @default(now()) @db.Timestamptz()
+  updated_at  DateTime  @default(now()) @db.Timestamptz()
+  
+  user        User      @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 
-  user         User      @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  @@map("report_settings")
 }

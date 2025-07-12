@@ -66,6 +66,15 @@ import { LoadingScreen } from "@/components/ui/spinner";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 const ROLES = [
   { value: "user", label: "User" },
@@ -103,6 +112,44 @@ export default function UsersPage() {
     language_preference: "en",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
+  const [pageCount, setPageCount] = useState(0);
+  useEffect(() => {
+    // Update pageCount whenever users array changes
+    setPageCount(Math.ceil(users.length / pagination.pageSize));
+  }, [users, pagination.pageSize]);
+    const paginatedUsers = users.slice(
+    pagination.pageIndex * pagination.pageSize,
+    (pagination.pageIndex + 1) * pagination.pageSize
+  );
+
+  // Pagination helpers
+  const canPreviousPage = pagination.pageIndex > 0;
+  const canNextPage = pagination.pageIndex < pageCount - 1;
+
+  const previousPage = () => {
+    if (canPreviousPage) {
+      setPagination((prev) => ({ ...prev, pageIndex: prev.pageIndex - 1 }));
+    }
+  };
+
+  const nextPage = () => {
+    if (canNextPage) {
+      setPagination((prev) => ({ ...prev, pageIndex: prev.pageIndex + 1 }));
+    }
+  };
+
+  const setPageIndex = (index) => {
+    setPagination((prev) => ({ ...prev, pageIndex: index }));
+  };
+
+  const setPageSize = (size) => {
+    setPagination((prev) => ({ ...prev, pageSize: size, pageIndex: 0 }));
+  };
 
   useEffect(() => {
     // Check if user is admin
@@ -354,6 +401,120 @@ export default function UsersPage() {
     return <LoadingScreen message="Loading users..." />;
   }
 
+  function DataTablePagination({ table }) {
+  return (
+    <div className="flex items-center justify-between px-2 py-4">
+      <div className="flex-1 text-sm text-muted-foreground">
+        {table.getFilteredSelectedRowModel().rows.length} of{" "}
+        {table.getFilteredRowModel().rows.length} row(s) selected.
+      </div>
+      <div className="flex items-center gap-6">
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium">Rows per page</p>
+          <Select
+            value={`${table.getState().pagination.pageSize}`}
+            onValueChange={(value) => {
+              table.setPageSize(Number(value))
+            }}
+          >
+            <SelectTrigger className="h-8 w-[70px]">
+              <SelectValue placeholder={table.getState().pagination.pageSize} />
+            </SelectTrigger>
+            <SelectContent side="top">
+              {[10, 20, 30, 40, 50].map((pageSize) => (
+                <SelectItem key={pageSize} value={`${pageSize}`}>
+                  {pageSize}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault()
+                  table.previousPage()
+                }}
+                disabled={!table.getCanPreviousPage()}
+              />
+            </PaginationItem>
+            
+            {/* First Page */}
+            <PaginationItem>
+              <PaginationLink 
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault()
+                  table.setPageIndex(0)
+                }}
+                isActive={table.getState().pagination.pageIndex === 0}
+              >
+                1
+              </PaginationLink>
+            </PaginationItem>
+            
+            {/* Show ellipsis if there are many pages and we're not near the beginning */}
+            {table.getPageCount() > 3 && table.getState().pagination.pageIndex > 1 && (
+              <PaginationItem>
+                <PaginationEllipsis />
+              </PaginationItem>
+            )}
+            
+            {/* Current page (if not first or last) */}
+            {table.getPageCount() > 2 && 
+             table.getState().pagination.pageIndex !== 0 && 
+             table.getState().pagination.pageIndex !== table.getPageCount() - 1 && (
+              <PaginationItem>
+                <PaginationLink href="#" isActive onClick={(e) => e.preventDefault()}>
+                  {table.getState().pagination.pageIndex + 1}
+                </PaginationLink>
+              </PaginationItem>
+            )}
+            
+            {/* Show ellipsis if there are many pages and we're not near the end */}
+            {table.getPageCount() > 3 && table.getState().pagination.pageIndex < table.getPageCount() - 2 && (
+              <PaginationItem>
+                <PaginationEllipsis />
+              </PaginationItem>
+            )}
+            
+            {/* Last Page (if more than one page) */}
+            {table.getPageCount() > 1 && (
+              <PaginationItem>
+                <PaginationLink
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    table.setPageIndex(table.getPageCount() - 1)
+                  }}
+                  isActive={table.getState().pagination.pageIndex === table.getPageCount() - 1}
+                >
+                  {table.getPageCount()}
+                </PaginationLink>
+              </PaginationItem>
+            )}
+            
+            <PaginationItem>
+              <PaginationNext
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault()
+                  table.nextPage()
+                }}
+                disabled={!table.getCanNextPage()}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      </div>
+    </div>
+  )
+}
+
   return (
     <SidebarProvider
       style={{
@@ -405,7 +566,8 @@ export default function UsersPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {users.map((user) => (
+
+                        {/* {users.map((user) => (
                           <TableRow key={user.user_id}>
                             <TableCell>
                               <div className="flex items-center gap-2">
@@ -460,9 +622,183 @@ export default function UsersPage() {
                               </div>
                             </TableCell>
                           </TableRow>
-                        ))}
+                        ))} */}
+
+                        {paginatedUsers.length > 0 ? (
+                          paginatedUsers.map((user) => (
+                            <TableRow key={user.user_id}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                  <IconUser className="h-4 w-4" />
+                                </div>
+                                <div>
+                                  <div className="font-medium">
+                                    {user.full_name}
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">
+                                    ID: {user.user_id}
+                                  </div>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>{user.email}</TableCell>
+                            <TableCell>
+                              <Badge variant={getRoleBadgeVariant(user.role)}>
+                                <IconShield className="h-3 w-3 mr-1" />
+                                {user.role.toUpperCase()}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{user.account_count || 0}</TableCell>
+                            <TableCell>{user.transaction_count || 0}</TableCell>
+                            <TableCell>{formatDate(user.created_at)}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => fetchUserDetails(user.user_id)}
+                                >
+                                  <IconEye className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openEditDialog(user)}
+                                >
+                                  <IconEdit className="h-4 w-4" />
+                                </Button>
+                                {user.user_id !== currentUser?.user_id && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => openDeleteDialog(user)}
+                                  >
+                                    <IconTrash className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={7} className="h-24 text-center">
+                              No users found.
+                            </TableCell>
+                          </TableRow>
+                        )}
                       </TableBody>
                     </Table>
+                      {/* Add the pagination controls */}
+                      <div className="flex items-center justify-between px-2 py-4">
+                        <div className="flex-1 text-sm text-muted-foreground">
+                          Showing {pagination.pageIndex * pagination.pageSize + 1} to{" "}
+                          {Math.min((pagination.pageIndex + 1) * pagination.pageSize, users.length)} of{" "}
+                          {users.length} users
+                        </div>
+                        <div className="flex items-center gap-6">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium">Rows per page</p>
+                            <Select
+                              value={pagination.pageSize.toString()}
+                              onValueChange={(value) => setPageSize(Number(value))}
+                            >
+                              <SelectTrigger className="h-8 w-[70px]">
+                                <SelectValue placeholder={pagination.pageSize} />
+                              </SelectTrigger>
+                              <SelectContent side="top">
+                                {[10, 20, 30, 40, 50].map((pageSize) => (
+                                  <SelectItem key={pageSize} value={pageSize.toString()}>
+                                    {pageSize}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <Pagination>
+                            <PaginationContent>
+                              <PaginationItem>
+                                <PaginationPrevious
+                                  href="#"
+                                  onClick={(e) => {
+                                    e.preventDefault()
+                                    previousPage()
+                                  }}
+                                  disabled={!canPreviousPage}
+                                />
+                              </PaginationItem>
+                              
+                              {/* First Page */}
+                              <PaginationItem>
+                                <PaginationLink 
+                                  href="#"
+                                  onClick={(e) => {
+                                    e.preventDefault()
+                                    setPageIndex(0)
+                                  }}
+                                  isActive={pagination.pageIndex === 0}
+                                >
+                                  1
+                                </PaginationLink>
+                              </PaginationItem>
+                              
+                              {/* Show ellipsis if there are many pages and we're not near the beginning */}
+                              {pageCount > 3 && pagination.pageIndex > 1 && (
+                                <PaginationItem>
+                                  <PaginationEllipsis />
+                                </PaginationItem>
+                              )}
+                              
+                              {/* Current page (if not first or last) */}
+                              {pageCount > 2 && 
+                              pagination.pageIndex !== 0 && 
+                              pagination.pageIndex !== pageCount - 1 && (
+                                <PaginationItem>
+                                  <PaginationLink href="#" isActive onClick={(e) => e.preventDefault()}>
+                                    {pagination.pageIndex + 1}
+                                  </PaginationLink>
+                                </PaginationItem>
+                              )}
+                              
+                              {/* Show ellipsis if there are many pages and we're not near the end */}
+                              {pageCount > 3 && pagination.pageIndex < pageCount - 2 && (
+                                <PaginationItem>
+                                  <PaginationEllipsis />
+                                </PaginationItem>
+                              )}
+                              
+                              {/* Last Page (if more than one page) */}
+                              {pageCount > 1 && (
+                                <PaginationItem>
+                                  <PaginationLink
+                                    href="#"
+                                    onClick={(e) => {
+                                      e.preventDefault()
+                                      setPageIndex(pageCount - 1)
+                                    }}
+                                    isActive={pagination.pageIndex === pageCount - 1}
+                                  >
+                                    {pageCount}
+                                  </PaginationLink>
+                                </PaginationItem>
+                              )}
+                              
+                              <PaginationItem>
+                                <PaginationNext
+                                  href="#"
+                                  onClick={(e) => {
+                                    e.preventDefault()
+                                    nextPage()
+                                  }}
+                                  disabled={!canNextPage}
+                                />
+                              </PaginationItem>
+                            </PaginationContent>
+                          </Pagination>
+                        </div>
+                      </div>
                   </CardContent>
                 </Card>
 

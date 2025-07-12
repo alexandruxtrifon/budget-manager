@@ -27,6 +27,7 @@ import {
   IconChartColumn,
   IconChartArrows,
   IconChartDots2,
+  IconTag
 } from "@tabler/icons-react"
 
 import { NavDocuments } from "@/components/nav-documents"
@@ -118,6 +119,11 @@ const data = {
         icon: IconReport,
       },
       ...(user?.role === 'admin' ? [
+        {
+          name: "Categories",
+          url: "/nomenclator",
+          icon: IconTag,
+        },
         {
           name: "Aggregate Data",
           url: "/aggregate",

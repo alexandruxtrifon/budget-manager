@@ -1,0 +1,2 @@
+alter table categories drop column user_id, drop column parent_category_id, drop column created_at, drop column updated_at, drop column type;
+ALTER TABLE categories ADD COLUMN match_keywords TEXT[] DEFAULT '{}'

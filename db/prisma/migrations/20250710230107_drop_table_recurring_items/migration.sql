@@ -1,0 +1,1 @@
+drop table recurring_items

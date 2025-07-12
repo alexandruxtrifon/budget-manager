@@ -343,6 +343,39 @@ async function processWelcomeEmails(client) {
     
 }
 
+const handleResendOtp = async () => {
+  if (!forgotEmail) return
+  
+  try {
+    setCanResend(false)
+    
+    const res = await fetch("http://localhost:3001/api/auth/forgot-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: forgotEmail }),
+    })
+    
+    if (res.ok) {
+      const data = await res.json()
+      if (data.notification_id) {
+        localStorage.setItem('notification_id', data.notification_id)
+        console.log("Updated notification_id in localStorage:", data.notification_id)
+      }
+      
+      toast.success("Reset code resent to your email")
+      startTimer()
+    } else {
+      const data = await res.json()
+      toast.error(data.error || "Failed to resend OTP")
+      setCanResend(true)
+    }
+  } catch (error) {
+    console.error("Failed to resend OTP:", error)
+    toast.error("Failed to resend reset code. Please try again.")
+    setCanResend(true)
+  }
+}
+
 async function init() {
   try {
     if (isInitialized) {

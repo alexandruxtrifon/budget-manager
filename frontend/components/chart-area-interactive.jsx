@@ -262,10 +262,15 @@ const chartConfig = {
 //   );
 // }
 
-export function ChartAreaInteractive({ transactions = [], currency = "EUR" }) {
+export function ChartAreaInteractive({ transactions = [], currency = "EUR", timeRange = "30d", onTimeRangeChange }) {
   const isMobile = useIsMobile()
-  const [timeRange, setTimeRange] = React.useState("90d")
+  //const [timeRange, setTimeRange] = React.useState("90d")
 
+  const handleTimeRangeChange = (newRange) => {
+  if (onTimeRangeChange) {
+    onTimeRangeChange(newRange);
+  }
+  };
   const prepareChartData = React.useCallback(() => {
     if (!transactions || transactions.length === 0) {
       return [];
@@ -304,7 +309,7 @@ export function ChartAreaInteractive({ transactions = [], currency = "EUR" }) {
 
   React.useEffect(() => {
     if (isMobile) {
-      setTimeRange("7d");
+      handleTimeRangeChange("7d");
     }
   }, [isMobile]);
 
@@ -391,14 +396,14 @@ export function ChartAreaInteractive({ transactions = [], currency = "EUR" }) {
           <ToggleGroup
             type="single"
             value={timeRange}
-            onValueChange={setTimeRange}
+            onValueChange={handleTimeRangeChange}
             variant="outline"
             className="hidden *:data-[slot=toggle-group-item]:!px-4 @[767px]/card:flex">
             <ToggleGroupItem value="90d">Last 3 months</ToggleGroupItem>
             <ToggleGroupItem value="30d">Last 30 days</ToggleGroupItem>
             <ToggleGroupItem value="7d">Last 7 days</ToggleGroupItem>
           </ToggleGroup>
-          <Select value={timeRange} onValueChange={setTimeRange}>
+          <Select value={timeRange} onValueChange={handleTimeRangeChange}>
             <SelectTrigger
               className="flex w-40 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate @[767px]/card:hidden"
               size="sm"

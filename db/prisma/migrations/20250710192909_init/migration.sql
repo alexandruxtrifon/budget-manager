@@ -1,19 +1,19 @@
 -- CreateTable
-CREATE TABLE "User" (
+CREATE TABLE "users" (
     "user_id" SERIAL NOT NULL,
-    "email" TEXT NOT NULL,
-    "password_hash" TEXT NOT NULL,
-    "full_name" TEXT,
+    "email" VARCHAR(255) NOT NULL,
+    "password_hash" VARCHAR(255) NOT NULL,
+    "full_name" VARCHAR(255),
     "language_preference" VARCHAR(10) NOT NULL DEFAULT 'en',
     "role" VARCHAR(20) NOT NULL DEFAULT 'user',
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "User_pkey" PRIMARY KEY ("user_id")
+    CONSTRAINT "users_pkey" PRIMARY KEY ("user_id")
 );
 
 -- CreateTable
-CREATE TABLE "Account" (
+CREATE TABLE "accounts" (
     "account_id" SERIAL NOT NULL,
     "user_id" INTEGER NOT NULL,
     "name" VARCHAR(100) NOT NULL,
@@ -24,11 +24,11 @@ CREATE TABLE "Account" (
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "Account_pkey" PRIMARY KEY ("account_id")
+    CONSTRAINT "accounts_pkey" PRIMARY KEY ("account_id")
 );
 
 -- CreateTable
-CREATE TABLE "Category" (
+CREATE TABLE "categories" (
     "category_id" SERIAL NOT NULL,
     "user_id" INTEGER NOT NULL,
     "name" VARCHAR(100) NOT NULL,
@@ -37,11 +37,11 @@ CREATE TABLE "Category" (
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "Category_pkey" PRIMARY KEY ("category_id")
+    CONSTRAINT "categories_pkey" PRIMARY KEY ("category_id")
 );
 
 -- CreateTable
-CREATE TABLE "ClassificationRule" (
+CREATE TABLE "classification_rules" (
     "rule_id" SERIAL NOT NULL,
     "user_id" INTEGER NOT NULL,
     "keyword" VARCHAR(255) NOT NULL,
@@ -51,16 +51,16 @@ CREATE TABLE "ClassificationRule" (
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "ClassificationRule_pkey" PRIMARY KEY ("rule_id")
+    CONSTRAINT "classification_rules_pkey" PRIMARY KEY ("rule_id")
 );
 
 -- CreateTable
-CREATE TABLE "Transaction" (
+CREATE TABLE "transactions" (
     "transaction_id" SERIAL NOT NULL,
     "user_id" INTEGER NOT NULL,
     "account_id" INTEGER NOT NULL,
     "amount" DECIMAL(14,2) NOT NULL,
-    "currency" CHAR(3) NOT NULL DEFAULT 'EUR',
+    "currency" CHAR(3) NOT NULL DEFAULT 'RON',
     "transaction_type" VARCHAR(20) NOT NULL,
     "category_id" INTEGER,
     "description" TEXT,
@@ -68,11 +68,11 @@ CREATE TABLE "Transaction" (
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "Transaction_pkey" PRIMARY KEY ("transaction_id")
+    CONSTRAINT "transactions_pkey" PRIMARY KEY ("transaction_id")
 );
 
 -- CreateTable
-CREATE TABLE "Budget" (
+CREATE TABLE "budgets" (
     "budget_id" SERIAL NOT NULL,
     "user_id" INTEGER NOT NULL,
     "category_id" INTEGER NOT NULL,
@@ -82,11 +82,11 @@ CREATE TABLE "Budget" (
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "Budget_pkey" PRIMARY KEY ("budget_id")
+    CONSTRAINT "budgets_pkey" PRIMARY KEY ("budget_id")
 );
 
 -- CreateTable
-CREATE TABLE "Objective" (
+CREATE TABLE "objectives" (
     "objective_id" SERIAL NOT NULL,
     "user_id" INTEGER NOT NULL,
     "name" VARCHAR(255) NOT NULL,
@@ -96,11 +96,11 @@ CREATE TABLE "Objective" (
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "Objective_pkey" PRIMARY KEY ("objective_id")
+    CONSTRAINT "objectives_pkey" PRIMARY KEY ("objective_id")
 );
 
 -- CreateTable
-CREATE TABLE "RecurringItem" (
+CREATE TABLE "recurring_items" (
     "recurring_id" SERIAL NOT NULL,
     "user_id" INTEGER NOT NULL,
     "account_id" INTEGER NOT NULL,
@@ -115,11 +115,11 @@ CREATE TABLE "RecurringItem" (
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "RecurringItem_pkey" PRIMARY KEY ("recurring_id")
+    CONSTRAINT "recurring_items_pkey" PRIMARY KEY ("recurring_id")
 );
 
 -- CreateTable
-CREATE TABLE "Notification" (
+CREATE TABLE "notifications" (
     "notification_id" SERIAL NOT NULL,
     "user_id" INTEGER NOT NULL,
     "type" VARCHAR(50) NOT NULL,
@@ -127,11 +127,11 @@ CREATE TABLE "Notification" (
     "is_read" BOOLEAN NOT NULL DEFAULT false,
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "Notification_pkey" PRIMARY KEY ("notification_id")
+    CONSTRAINT "notifications_pkey" PRIMARY KEY ("notification_id")
 );
 
 -- CreateTable
-CREATE TABLE "ReportSetting" (
+CREATE TABLE "report_settings" (
     "report_id" SERIAL NOT NULL,
     "user_id" INTEGER NOT NULL,
     "report_type" VARCHAR(50) NOT NULL,
@@ -141,59 +141,59 @@ CREATE TABLE "ReportSetting" (
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "ReportSetting_pkey" PRIMARY KEY ("report_id")
+    CONSTRAINT "report_settings_pkey" PRIMARY KEY ("report_id")
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Budget_user_id_category_id_period_start_period_end_key" ON "Budget"("user_id", "category_id", "period_start", "period_end");
+CREATE UNIQUE INDEX "budgets_user_id_category_id_period_start_period_end_key" ON "budgets"("user_id", "category_id", "period_start", "period_end");
 
 -- AddForeignKey
-ALTER TABLE "Account" ADD CONSTRAINT "Account_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("user_id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "accounts" ADD CONSTRAINT "accounts_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("user_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Category" ADD CONSTRAINT "Category_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("user_id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "categories" ADD CONSTRAINT "categories_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("user_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Category" ADD CONSTRAINT "Category_parent_category_id_fkey" FOREIGN KEY ("parent_category_id") REFERENCES "Category"("category_id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "categories" ADD CONSTRAINT "categories_parent_category_id_fkey" FOREIGN KEY ("parent_category_id") REFERENCES "categories"("category_id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ClassificationRule" ADD CONSTRAINT "ClassificationRule_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("user_id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "classification_rules" ADD CONSTRAINT "classification_rules_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("user_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ClassificationRule" ADD CONSTRAINT "ClassificationRule_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "Category"("category_id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "classification_rules" ADD CONSTRAINT "classification_rules_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "categories"("category_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Transaction" ADD CONSTRAINT "Transaction_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("user_id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "transactions" ADD CONSTRAINT "transactions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("user_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Transaction" ADD CONSTRAINT "Transaction_account_id_fkey" FOREIGN KEY ("account_id") REFERENCES "Account"("account_id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "transactions" ADD CONSTRAINT "transactions_account_id_fkey" FOREIGN KEY ("account_id") REFERENCES "accounts"("account_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Transaction" ADD CONSTRAINT "Transaction_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "Category"("category_id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "transactions" ADD CONSTRAINT "transactions_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "categories"("category_id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Budget" ADD CONSTRAINT "Budget_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("user_id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "budgets" ADD CONSTRAINT "budgets_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("user_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Budget" ADD CONSTRAINT "Budget_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "Category"("category_id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "budgets" ADD CONSTRAINT "budgets_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "categories"("category_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Objective" ADD CONSTRAINT "Objective_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("user_id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "objectives" ADD CONSTRAINT "objectives_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("user_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "RecurringItem" ADD CONSTRAINT "RecurringItem_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("user_id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "recurring_items" ADD CONSTRAINT "recurring_items_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("user_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "RecurringItem" ADD CONSTRAINT "RecurringItem_account_id_fkey" FOREIGN KEY ("account_id") REFERENCES "Account"("account_id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "recurring_items" ADD CONSTRAINT "recurring_items_account_id_fkey" FOREIGN KEY ("account_id") REFERENCES "accounts"("account_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "RecurringItem" ADD CONSTRAINT "RecurringItem_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "Category"("category_id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "recurring_items" ADD CONSTRAINT "recurring_items_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "categories"("category_id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Notification" ADD CONSTRAINT "Notification_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("user_id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "notifications" ADD CONSTRAINT "notifications_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("user_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ReportSetting" ADD CONSTRAINT "ReportSetting_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("user_id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "report_settings" ADD CONSTRAINT "report_settings_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("user_id") ON DELETE CASCADE ON UPDATE CASCADE;

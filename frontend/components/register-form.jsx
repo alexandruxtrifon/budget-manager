@@ -353,10 +353,14 @@ export function RegisterForm() {
       else {
         const data = await res.json()
         toast.error(data.error || "Failed to resend OTP")
+        setCanResend(true)
+
       }
     } catch (error) {
       console.error("Failed to resend OTP:", error)
       toast.error("Failed to resend OTP. Please try again.")
+      setCanResend(true)
+
     }
   }
 

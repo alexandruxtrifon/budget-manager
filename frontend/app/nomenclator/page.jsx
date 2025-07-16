@@ -57,6 +57,7 @@ const [formData, setFormData] = useState({
   })
   const [editingCategory, setEditingCategory] = useState(null)
   const [keywordInput, setKeywordInput] = useState("")
+  const [isRecategorizing, setIsRecategorizing] = useState(false);
 
   const handleUserUpdate = (updatedUser) => {
   console.log('Nomenclator handleUserUpdate called with:', updatedUser);
@@ -99,10 +100,7 @@ useEffect(() => {
         setCategories(data)
       } catch (error) {
         console.error("Error fetching categories:", error)
-        toast({
-          title: "Error",
-          description: "Failed to load categories. Please try again."
-        })
+        toast.error("Failed to load categories. Please try again.");
       } finally {
         setIsLoading(false)
       }
@@ -147,10 +145,7 @@ useEffect(() => {
       const newCategory = await response.json()
       setCategories([...categories, newCategory])
       
-      toast({
-        title: "Success",
-        description: "Category created successfully"
-      })
+      toast.success("Category created successfully");
       
       // Reset form
       setFormData({
@@ -159,10 +154,7 @@ useEffect(() => {
       })
     } catch (error) {
       console.error("Error creating category:", error)
-      toast({
-        title: "Error",
-        description: "Failed to create category. Please try again."
-      })
+      toast.error("Failed to create category. Please try again.");
     }
   }
 
@@ -196,10 +188,7 @@ useEffect(() => {
         cat.category_id === updatedCategory.category_id ? updatedCategory : cat
       ))
       
-      toast({
-        title: "Success",
-        description: "Category updated successfully"
-      })
+      toast.success("Category updated successfully");
       
       setEditingCategory(null)
       
@@ -210,10 +199,7 @@ useEffect(() => {
       })
     } catch (error) {
       console.error("Error updating category:", error)
-      toast({
-        title: "Error",
-        description: "Failed to update category. Please try again."
-      })
+      toast.error("Failed to update category. Please try again.");
     }
   }
 
@@ -238,16 +224,10 @@ useEffect(() => {
       
       setCategories(categories.filter(cat => cat.category_id !== categoryId))
       
-      toast({
-        title: "Success",
-        description: "Category deleted successfully"
-      })
+      toast.success("Category deleted successfully");
     } catch (error) {
       console.error("Error deleting category:", error)
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete category. Please try again."
-      })
+      toast.error(error.message || "Failed to delete category. Please try again.");
     }
   }
 
@@ -342,6 +322,34 @@ useEffect(() => {
                 </DialogContent>
               </Dialog>
             )}
+            {isAdmin && (
+              <Button
+                variant="secondary"
+                disabled={isRecategorizing}
+                onClick={async () => {
+                  setIsRecategorizing(true);
+                  try {
+                    const token = localStorage.getItem("token");
+                    const response = await fetch('http://localhost:3001/api/categories/re-categorize-all', {
+                      method: 'POST',
+                      headers: { Authorization: `Bearer ${token}` },
+                    });
+                    const data = await response.json();
+                    if (response.ok) {
+                      toast.success(data.message || 'Re-categorization complete.');
+                    } else {
+                      toast.error(data.error || 'Failed to re-categorize transactions.');
+                    }
+                  } catch (err) {
+                    toast.error('Failed to re-categorize transactions.');
+                  } finally {
+                    setIsRecategorizing(false);
+                  }
+                }}
+              >
+                {isRecategorizing ? 'Re-categorizing...' : 'Re-categorize All Transactions'}
+              </Button>
+            )}
           </div>
           
           <Card>
@@ -380,7 +388,7 @@ useEffect(() => {
                           {category.name}
                         </TableCell>
                         <TableCell>
-                          <div className="flex flex-wrap gap-1 max-w-xs">
+                          <div className="flex flex-wrap gap-1 max-w-xxl">
                             {category.match_keywords?.map((keyword, i) => (
                               <Badge key={i} variant="outline" className="text-xs">
                                 {keyword}
@@ -397,15 +405,14 @@ useEffect(() => {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                              onClick={() => onDelete(category.category_id)}
-
+                                onClick={() => handleEditCategory(category)}
                               >
                                 <IconEdit className="h-4 w-4" />
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => onDelete(category.category_id)}
+                                onClick={() => handleDeleteCategory(category.category_id)}
                               >
                                 <IconTrash className="h-4 w-4" />
                               </Button>

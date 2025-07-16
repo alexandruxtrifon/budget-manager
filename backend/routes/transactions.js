@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const authMiddleware = require("../authMiddleware");
 const { logActivity } = require('../logActivity');
+const { findMatchingCategory } = require('../services/utils');
 
 module.exports = (pool) => {
   // GET all transactions for a user
@@ -93,7 +94,7 @@ router.get('/account/:accountId', authMiddleware, async (req, res) => {
 
   // POST a new transaction
   router.post("/", async (req, res) => {
-    const {
+    let {
       user_id,
       account_id,
       amount,
@@ -103,6 +104,18 @@ router.get('/account/:accountId', authMiddleware, async (req, res) => {
       description,
       transaction_date,
     } = req.body;
+
+    // If category_id is not provided, try to auto-attribute
+    if (!category_id) {
+      try {
+        const categoriesResult = await pool.query('SELECT * FROM categories');
+        const categories = categoriesResult.rows;
+        category_id = findMatchingCategory(description, categories) || null;
+      } catch (err) {
+        console.error('Error auto-attributing category:', err);
+        // fallback: leave category_id as null
+      }
+    }
 
     try {
       const result = await pool.query(
@@ -133,6 +146,113 @@ router.get('/account/:accountId', authMiddleware, async (req, res) => {
     } catch (err) {
       console.error(err);
       res.status(500).send("Error creating transaction");
+    }
+  });
+
+  // PUT (update) a transaction
+  router.put("/:transactionId", authMiddleware, async (req, res) => {
+    try {
+      const transactionId = req.params.transactionId;
+      let {
+        user_id,
+        account_id,
+        amount,
+        currency,
+        transaction_type,
+        category_id,
+        description,
+        transaction_date,
+      } = req.body;
+
+      // First, verify the transaction exists and belongs to the authenticated user
+      const existingTransaction = await pool.query(
+        `SELECT * FROM transactions WHERE transaction_id = $1 AND user_id = $2`,
+        [transactionId, req.user.user_id]
+      );
+
+      if (existingTransaction.rows.length === 0) {
+        return res.status(404).json({ error: "Transaction not found or unauthorized" });
+      }
+
+      // If category_id is not provided, try to auto-attribute
+      if (!category_id) {
+        try {
+          const categoriesResult = await pool.query('SELECT * FROM categories');
+          const categories = categoriesResult.rows;
+          category_id = findMatchingCategory(description, categories) || null;
+        } catch (err) {
+          console.error('Error auto-attributing category:', err);
+          // fallback: leave category_id as null
+        }
+      }
+
+      const result = await pool.query(
+        `UPDATE transactions
+         SET account_id = $1, amount = $2, currency = $3, transaction_type = $4, 
+             category_id = $5, description = $6, transaction_date = $7, updated_at = NOW()
+         WHERE transaction_id = $8 AND user_id = $9
+         RETURNING *`,
+        [
+          account_id,
+          amount,
+          currency,
+          transaction_type,
+          category_id,
+          description,
+          transaction_date,
+          transactionId,
+          req.user.user_id,
+        ]
+      );
+
+      await logActivity(pool, req.user.user_id, 'UPDATE_TRANSACTION', 'TRANSACTION', description, {
+        transaction_id: transactionId,
+        account_id,
+        amount,
+        currency,
+        transaction_type,
+        category_id,
+        transaction_date
+      });
+
+      res.json(result.rows[0]);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Error updating transaction" });
+    }
+  });
+
+  // DELETE a transaction
+  router.delete("/:transactionId", authMiddleware, async (req, res) => {
+    try {
+      const transactionId = req.params.transactionId;
+
+      // First, verify the transaction exists and belongs to the authenticated user
+      const existingTransaction = await pool.query(
+        `SELECT * FROM transactions WHERE transaction_id = $1 AND user_id = $2`,
+        [transactionId, req.user.user_id]
+      );
+
+      if (existingTransaction.rows.length === 0) {
+        return res.status(404).json({ error: "Transaction not found or unauthorized" });
+      }
+
+      const result = await pool.query(
+        `DELETE FROM transactions WHERE transaction_id = $1 AND user_id = $2 RETURNING *`,
+        [transactionId, req.user.user_id]
+      );
+
+      await logActivity(pool, req.user.user_id, 'DELETE_TRANSACTION', 'TRANSACTION', result.rows[0]?.description, {
+        transaction_id: transactionId,
+        account_id: result.rows[0]?.account_id,
+        amount: result.rows[0]?.amount,
+        transaction_type: result.rows[0]?.transaction_type
+      });
+
+      res.json({ message: "Transaction deleted successfully" });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Error deleting transaction" });
     }
   });
 

@@ -1,0 +1,1 @@
+drop table classification_rules, report_settings, budgets

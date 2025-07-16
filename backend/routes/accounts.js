@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../authMiddleware');
 const { logActivity } = require('../logActivity');
+const { validateIban } = require("../../../bank-statement-parser/mod-97");
 
 module.exports = (pool) => {
   router.get('/:user_id', authMiddleware, async (req, res) => {
@@ -37,6 +38,14 @@ module.exports = (pool) => {
     }
     
     try {
+      // Check for duplicate IBAN for this user
+      const duplicate = await pool.query(
+        'SELECT 1 FROM accounts WHERE name = $1',
+        [name]
+      );
+      if (duplicate.rows.length > 0) {
+        return res.status(400).json({ error: 'An account with this IBAN already exists.' });
+      }
       const result = await pool.query(
         `INSERT INTO accounts 
          (user_id, name, account_type, currency, initial_balance, current_balance) 
@@ -214,6 +223,20 @@ module.exports = (pool) => {
     } catch (err) {
       console.error('Error deleting account:', err);
       res.status(500).json({ error: 'Failed to delete account' });
+    }
+  });
+
+  // IBAN validation endpoint
+  router.post('/validate-iban', (req, res) => {
+    const { iban } = req.body;
+    if (!iban) {
+      return res.status(400).json({ isValid: false, error: 'IBAN is required' });
+    }
+    try {
+      const result = validateIban(iban);
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ isValid: false, error: 'Validation error' });
     }
   });
 

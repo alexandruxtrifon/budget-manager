@@ -159,5 +159,57 @@ module.exports = (pool) => {
     }
   });
 
+  // Re-categorize all transactions based on current categories/keywords (admin only)
+  router.post('/re-categorize-all', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+      // Fetch all categories and their keywords
+      const categoriesResult = await pool.query('SELECT category_id, name, match_keywords FROM categories');
+      const categories = categoriesResult.rows;
+
+      // Fetch all transactions
+      const transactionsResult = await pool.query('SELECT transaction_id, description FROM transactions');
+      const transactions = transactionsResult.rows;
+
+      // Helper: find matching category for a description
+      function findMatchingCategory(description) {
+        if (!description) return null;
+        const normalizedDescription = description.toLowerCase()
+          .replace(/\s+/g, '')
+          .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '');
+        for (const category of categories) {
+          if (category.match_keywords && category.match_keywords.length > 0) {
+            for (const keyword of category.match_keywords) {
+              if (!keyword) continue;
+              const normalizedKeyword = keyword.toLowerCase()
+                .replace(/\s+/g, '')
+                .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '');
+              if (normalizedDescription.includes(normalizedKeyword)) {
+                return category.category_id;
+              }
+            }
+          }
+        }
+        return null;
+      }
+
+      let updatedCount = 0;
+      for (const tx of transactions) {
+        const newCategoryId = findMatchingCategory(tx.description);
+        if (newCategoryId) {
+          // Update only if category_id is different
+          const current = await pool.query('SELECT category_id FROM transactions WHERE transaction_id = $1', [tx.transaction_id]);
+          if (!current.rows[0] || current.rows[0].category_id !== newCategoryId) {
+            await pool.query('UPDATE transactions SET category_id = $1 WHERE transaction_id = $2', [newCategoryId, tx.transaction_id]);
+            updatedCount++;
+          }
+        }
+      }
+      res.json({ message: `Re-categorization complete. Updated ${updatedCount} transactions.` });
+    } catch (error) {
+      console.error('Error during re-categorization:', error);
+      res.status(500).json({ error: 'Failed to re-categorize transactions.' });
+    }
+  });
+
   return router;
 };

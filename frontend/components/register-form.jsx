@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -194,36 +194,39 @@ export function RegisterForm() {
   const [timeRemaining, setTimeRemaining] = useState(120)
   const [progress, setProgress] = useState(100)
   const [canResend, setCanResend] = useState(false)
+  const [currentStep, setCurrentStep] = useState(0)
+
+  const startTimer = useCallback(() => {
+    setTimeRemaining(120)
+    setProgress(100)
+    setCanResend(false)
+    
+    const interval = setInterval(() => {
+      setTimeRemaining(prevTime => {
+        if (prevTime <= 1) {
+          clearInterval(interval)
+          setCanResend(true)
+          return 0
+        }
+        
+        const newTime = prevTime - 1
+        const newProgress = (newTime / 120) * 100
+        setProgress(newProgress)
+        
+        return newTime
+      })
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [])
 
   useEffect(() => {
-    let countdown
-    
-    if (api?.selectedScrollSnap() === 2) { // When on OTP screen
-      // Reset timer when entering OTP screen
-      setTimeRemaining(120)
-      setProgress(100)
-      setCanResend(false)
-      
-      countdown = setInterval(() => {
-        setTimeRemaining(prevTime => {
-          if (prevTime <= 1) {
-            clearInterval(countdown)
-            setCanResend(true)
-            return 0
-          }
-          
-          // Calculate progress percentage
-          const newTime = prevTime - 1
-          const newProgress = (newTime / 120) * 100
-          setProgress(newProgress)
-          
-          return newTime
-        })
-      }, 1000)
+    let cleanup
+    if (currentStep === 2) { // OTP verification step
+      cleanup = startTimer()
     }
-    
-    return () => clearInterval(countdown)
-  }, [api?.selectedScrollSnap()])
+    return cleanup
+  }, [currentStep, startTimer])
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60)
@@ -268,10 +271,12 @@ export function RegisterForm() {
         //setCarouselIndex(1)
         if (api) {
           api.scrollTo(1)
+          setCurrentStep(1)
           
           // After 3 seconds, move to OTP verification step
           setTimeout(() => {
             api.scrollTo(2)
+            setCurrentStep(2)
           }, 3000)
         }
       } else {
@@ -343,11 +348,8 @@ export function RegisterForm() {
           console.log("Updated notification_id in localStorage:", data.notification_id);
         }
         toast.success("OTP resent to your email")
-        setTimeout(() => {
-          // Reset timer after 3 seconds
-          setTimeRemaining(120)
-          setProgress(100)
-        }, 3000)
+        // Restart the timer
+        startTimer()
       } 
       
       else {
@@ -388,6 +390,8 @@ export function RegisterForm() {
             draggable: false, // Disable dragging between slides
           }}
           setApi={setApi}
+          value={currentStep}
+          onValueChange={setCurrentStep}
         >
         <CarouselContent>
           <CarouselItem>

@@ -92,6 +92,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 import { ImportDialog } from "@/components/import-dialog";
 
@@ -295,161 +303,6 @@ function DragHandle({ id }) {
 //   },
 // ]
 
-const columns = [
-  {
-    id: "select",
-    header: ({ table }) => (
-      <div className="flex items-center justify-center">
-        <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-        />
-      </div>
-    ),
-    cell: ({ row }) => (
-      <div className="flex items-center justify-center">
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
-      </div>
-    ),
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
-    accessorKey: "transaction_date",
-    header: "Date",
-    cell: ({ row }) => {
-      const date = new Date(row.getValue("transaction_date"));
-      return <div>{date.toLocaleDateString()}</div>;
-    },
-  },
-  {
-    accessorKey: "description",
-    header: "Description",
-  cell: ({ row }) => {
-    const description = row.getValue("description");
-    const truncated = description && description.length > 50 
-      ? `${description.substring(0, 50)}...` 
-      : description;
-      
-    return (
-      <div title={description} className="max-w-[300px] truncate">
-        {truncated}
-      </div>
-    );
-  },
-  },
-    {
-    accessorKey: "category_name",
-    header: "Category",
-    cell: ({ row }) => {
-      const categoryName = row.getValue("category_name");
-      
-      return categoryName ? (
-        <Badge variant="outline">{categoryName}</Badge>
-      ) : (
-        <Badge variant="outline" className="text-muted-foreground">
-          Uncategorized
-        </Badge>
-      );
-    },
-  },
-  {
-    accessorKey: "transaction_type",
-    header: "Type",
-    cell: ({ row }) => (
-      <Badge
-        variant={
-          row.getValue("transaction_type") === "expense"
-            ? "destructive"
-            : "success"
-        }
-      >
-        {row.getValue("transaction_type")}
-      </Badge>
-    ),
-  },
-  {
-    accessorKey: "amount",
-    header: "Amount",
-    cell: ({ row }) => {
-      const amount = parseFloat(row.getValue("amount"));
-      const type = row.getValue("transaction_type");
-      //const currency = row.getValue("currency");
-      return (
-        <div
-          className={`font-medium ${
-            type === "expense" ? "text-red-500" : "text-green-500"
-          }`}
-        >
-          {type === "expense" ? "-" : "+"}
-          {new Intl.NumberFormat("en-US", {
-            style: "currency",
-            currency: /*currency ||*/ "EUR",
-          }).format(Math.abs(amount))}
-        </div>
-      );
-    },
-  },
-  {
-    id: "actions",
-    cell: ({ row }) => (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="h-8 w-8 p-0">
-            <IconDotsVertical />
-            <span className="sr-only">Open menu</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => handleEdit(row.original)}>
-            Edit
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onClick={() => handleDelete(row.original)}
-            className="text-red-600"
-          >
-            Delete
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    ),
-  },
-];
-
-function DraggableRow({ row }) {
-  const { transform, transition, setNodeRef, isDragging } = useSortable({
-    id: row.original.transaction_id,
-  });
-
-  return (
-    <TableRow
-      data-state={row.getIsSelected() && "selected"}
-      data-dragging={isDragging}
-      ref={setNodeRef}
-      className="relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80"
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition: transition,
-      }}
-    >
-      {row.getVisibleCells().map((cell) => (
-        <TableCell key={cell.id}>
-          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-        </TableCell>
-      ))}
-    </TableRow>
-  );
-}
-
 export function DataTable({
   data: initialData = [],
   accounts = [],
@@ -470,22 +323,261 @@ export function DataTable({
     pageIndex: 0,
     pageSize: 10,
   });
+  const [editingTransaction, setEditingTransaction] = React.useState(null);
+  const [editForm, setEditForm] = React.useState({
+    amount: '',
+    transaction_type: 'expense',
+    account_id: '',
+    category_id: '',
+    description: '',
+    transaction_date: '',
+  });
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [showEditModal, setShowEditModal] = React.useState(false);
+
   const handleEdit = React.useCallback((transaction) => {
-    console.log("Edit transaction:", transaction);
-    toast.info("Edit feature coming soon");
+    setEditingTransaction(transaction);
+    setEditForm({
+      amount: transaction.amount.toString(),
+      transaction_type: transaction.transaction_type,
+      account_id: transaction.account_id.toString(),
+      category_id: transaction.category_id?.toString() || 'auto',
+      description: transaction.description || '',
+      transaction_date: transaction.transaction_date,
+    });
+    setShowEditModal(true);
   }, []);
   
   const handleDelete = React.useCallback((transaction) => {
-    console.log("Delete transaction:", transaction);
-    toast.info("Delete feature coming soon");
+    if (confirm(`Are you sure you want to delete this transaction: "${transaction.description}"?`)) {
+      handleDeleteTransaction(transaction.transaction_id);
+    }
   }, []);
-  
+
+  const handleDeleteTransaction = async (transactionId) => {
+    try {
+      const res = await fetch(`http://localhost:3001/api/transactions/${transactionId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (res.ok) {
+        toast.success('Transaction deleted successfully');
+        // Update local data
+        setData(prev => prev.filter(t => t.transaction_id !== transactionId));
+        // Call parent callback if provided
+        if (onImportComplete) {
+          onImportComplete();
+        }
+      } else {
+        const error = await res.json();
+        toast.error(error.error || 'Failed to delete transaction');
+      }
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      toast.error('Error deleting transaction');
+    }
+  };
+
+  const handleUpdateTransaction = async (e) => {
+    e.preventDefault();
+    if (!editingTransaction) return;
+    
+    setIsSubmitting(true);
+    try {
+      // Convert 'auto' back to null for the backend
+      const updateData = {
+        ...editForm,
+        user_id: userId,
+        currency: accounts.find(a => a.account_id.toString() === editForm.account_id)?.currency || 'RON',
+      };
+      
+      // If category_id is 'auto', set it to null for the backend
+      if (updateData.category_id === 'auto') {
+        updateData.category_id = null;
+      }
+
+      const res = await fetch(`http://localhost:3001/api/transactions/${editingTransaction.transaction_id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(updateData)
+      });
+      
+      if (res.ok) {
+        const updatedTransaction = await res.json();
+        toast.success('Transaction updated successfully');
+        
+        // Update local data
+        setData(prev => prev.map(t => 
+          t.transaction_id === editingTransaction.transaction_id ? updatedTransaction : t
+        ));
+        
+        setShowEditModal(false);
+        setEditingTransaction(null);
+        
+        // Call parent callback if provided
+        if (onImportComplete) {
+          onImportComplete();
+        }
+      } else {
+        const error = await res.json();
+        toast.error(error.error || 'Failed to update transaction');
+      }
+    } catch (error) {
+      console.error('Error updating transaction:', error);
+      toast.error('Error updating transaction');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEditFormChange = (e) => {
+    const { name, value } = e.target;
+    setEditForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const columns = [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <div className="flex items-center justify-center">
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            aria-label="Select all"
+          />
+        </div>
+      ),
+      cell: ({ row }) => (
+        <div className="flex items-center justify-center">
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+          />
+        </div>
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
+    {
+      accessorKey: "transaction_date",
+      header: "Date",
+      cell: ({ row }) => {
+        const date = new Date(row.getValue("transaction_date"));
+        return <div>{date.toLocaleDateString()}</div>;
+      },
+    },
+    {
+      accessorKey: "description",
+      header: "Description",
+    cell: ({ row }) => {
+      const description = row.getValue("description");
+      const truncated = description && description.length > 50 
+        ? `${description.substring(0, 50)}...` 
+        : description;
+        
+      return (
+        <div title={description} className="max-w-[300px] truncate">
+          {truncated}
+        </div>
+      );
+    },
+    },
+      {
+      accessorKey: "category_name",
+      header: "Category",
+      cell: ({ row }) => {
+        const categoryName = row.getValue("category_name");
+        
+        return categoryName ? (
+          <Badge variant="outline">{categoryName}</Badge>
+        ) : (
+          <Badge variant="outline" className="text-muted-foreground">
+            Uncategorized
+          </Badge>
+        );
+      },
+    },
+    {
+      accessorKey: "transaction_type",
+      header: "Type",
+      cell: ({ row }) => (
+        <Badge
+          variant={
+            row.getValue("transaction_type") === "expense"
+              ? "destructive"
+              : "success"
+          }
+        >
+          {row.getValue("transaction_type")}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: "amount",
+      header: "Amount",
+      cell: ({ row }) => {
+        const amount = parseFloat(row.getValue("amount"));
+        const type = row.getValue("transaction_type");
+        //const currency = row.getValue("currency");
+        return (
+          <div
+            className={`font-medium ${
+              type === "expense" ? "text-red-500" : "text-green-500"
+            }`}
+          >
+            {type === "expense" ? "-" : "+"}
+            {new Intl.NumberFormat("en-US", {
+              style: "currency",
+              currency: /*currency ||*/ "RON",
+            }).format(Math.abs(amount))}
+          </div>
+        );
+      },
+    },
+    {
+      id: "actions",
+      cell: ({ row }) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <IconDotsVertical />
+              <span className="sr-only">Open menu</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => handleEdit(row.original)}>
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => handleDelete(row.original)}
+              className="text-red-600"
+            >
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+  ];
+
   React.useEffect(() => {
     if (initialData) {
       //console.log("Updating data from new props:", initialData.length);
       setData(initialData);
     }
   }, [initialData]);
+  
   const sortableId = React.useId();
   const sensors = useSensors(
     useSensor(MouseSensor, {}),
@@ -529,6 +621,31 @@ export function DataTable({
         return arrayMove(data, oldIndex, newIndex);
       });
     }
+  }
+
+  function DraggableRow({ row }) {
+    const { transform, transition, setNodeRef, isDragging } = useSortable({
+      id: row.original.transaction_id,
+    });
+
+    return (
+      <TableRow
+        data-state={row.getIsSelected() && "selected"}
+        data-dragging={isDragging}
+        ref={setNodeRef}
+        className="relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80"
+        style={{
+          transform: CSS.Transform.toString(transform),
+          transition: transition,
+        }}
+      >
+        {row.getVisibleCells().map((cell) => (
+          <TableCell key={cell.id}>
+            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          </TableCell>
+        ))}
+      </TableRow>
+    );
   }
 
   return (
@@ -770,6 +887,97 @@ export function DataTable({
         <div className="aspect-video w-full flex-1 rounded-lg border border-dashed"></div>
       </TabsContent>
     </Tabs>
+    
+    {/* Edit Transaction Modal */}
+    <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit Transaction</DialogTitle>
+          <DialogDescription>Update transaction details</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleUpdateTransaction} className="space-y-4">
+          <div className="flex gap-2">
+            <Input
+              name="amount"
+              type="number"
+              step="0.01"
+              placeholder="Amount"
+              value={editForm.amount}
+              onChange={handleEditFormChange}
+              required
+            />
+            <Select
+              value={editForm.transaction_type}
+              onValueChange={val => setEditForm(f => ({ ...f, transaction_type: val }))}
+            >
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="income">Income</SelectItem>
+                <SelectItem value="expense">Expense</SelectItem>
+                <SelectItem value="transfer">Transfer</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex gap-2">
+            <Select
+              value={editForm.account_id}
+              onValueChange={val => setEditForm(f => ({ ...f, account_id: val }))}
+              required
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select Account" />
+              </SelectTrigger>
+              <SelectContent>
+                {accounts.map(account => (
+                  <SelectItem key={account.account_id} value={account.account_id.toString()}>
+                    {account.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={editForm.category_id}
+              onValueChange={val => setEditForm(f => ({ ...f, category_id: val }))}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="auto">Auto (by description)</SelectItem>
+                {/* Categories can be fetched and added here if needed */}
+              </SelectContent>
+            </Select>
+          </div>
+          <Input
+            name="description"
+            placeholder="Description"
+            value={editForm.description}
+            onChange={handleEditFormChange}
+          />
+          <Input
+            name="transaction_date"
+            type="date"
+            value={editForm.transaction_date}
+            onChange={handleEditFormChange}
+            required
+          />
+          <DialogFooter>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Updating...' : 'Update Transaction'}
+            </Button>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setShowEditModal(false)}
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
     </div>
   );
 }

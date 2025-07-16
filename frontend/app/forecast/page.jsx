@@ -15,7 +15,10 @@ import {
   IconMathAvg,
   IconMathMin,
   IconChartHistogram,
-  IconChartDots
+  IconChartDots,
+  IconAlertTriangle,
+  IconInfoCircle,
+  IconFileDownload
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { ForecastChart } from "@/components/forecast-chart";
@@ -37,6 +40,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Info, Lightbulb, TrendingUp, CalendarDays } from "lucide-react";
 
 export default function ForecastPage() {
   const router = useRouter();
@@ -234,6 +239,119 @@ export default function ForecastPage() {
                       <Button onClick={fetchForecastData} disabled={isLoading}>
                         Update
                       </Button>
+                      <Button
+                        variant="outline"
+                        className="flex items-center gap-2"
+                        onClick={async () => {
+                          try {
+                            const token = localStorage.getItem("token");
+                            if (!forecastData || !forecastData.chart || !forecastData.chart.forecast) {
+                              throw new Error("Forecast data is incomplete or not loaded.");
+                            }
+                            
+                            // Extract data from the actual structure
+                            const forecastIncome = forecastData.chart.forecast.income || [];
+                            const forecastExpenses = forecastData.chart.forecast.expenses || [];
+                            const histIncome = forecastData.chart.income || [];
+                            const histExpenses = forecastData.chart.expenses || [];
+                            
+                            if (!Array.isArray(forecastIncome) || !Array.isArray(forecastExpenses)) {
+                              throw new Error("Forecast data is not in the expected format.");
+                            }
+                            
+                            // Create labels for the chart (combine historical and forecast dates)
+                            const histLabels = histIncome.map(item => item.day);
+                            const forecastLabels = forecastIncome.map(item => item.day);
+                            const allLabels = [...histLabels, ...forecastLabels];
+                            
+                            // Extract amounts for chart data
+                            const histIncomeAmounts = histIncome.map(item => item.amount);
+                            const histExpenseAmounts = histExpenses.map(item => item.amount);
+                            const forecastIncomeAmounts = forecastIncome.map(item => item.amount);
+                            const forecastExpenseAmounts = forecastExpenses.map(item => item.amount);
+                            
+                            // Prepare chartData for Chart.js (income and expenses, historical + forecast)
+                            const chartData = {
+                              type: 'line',
+                              data: {
+                                labels: allLabels,
+                                datasets: [
+                                  {
+                                    label: 'Forecasted Income',
+                                    data: [...Array(histLabels.length).fill(null), ...forecastIncomeAmounts],
+                                    borderColor: '#4ade80',
+                                    backgroundColor: 'rgba(74,222,128,0.2)',
+                                    borderDash: [6, 4],
+                                    fill: false
+                                  },
+                                  {
+                                    label: 'Forecasted Expenses',
+                                    data: [...Array(histLabels.length).fill(null), ...forecastExpenseAmounts],
+                                    borderColor: '#f87171',
+                                    backgroundColor: 'rgba(248,113,113,0.2)',
+                                    borderDash: [6, 4],
+                                    fill: false
+                                  },
+                                  {
+                                    label: 'Historical Income',
+                                    data: [...histIncomeAmounts, ...Array(forecastLabels.length).fill(null)],
+                                    borderColor: '#2563eb',
+                                    backgroundColor: 'rgba(37,99,235,0.2)',
+                                    fill: false
+                                  },
+                                  {
+                                    label: 'Historical Expenses',
+                                    data: [...histExpenseAmounts, ...Array(forecastLabels.length).fill(null)],
+                                    borderColor: '#be185d',
+                                    backgroundColor: 'rgba(190,24,93,0.2)',
+                                    fill: false
+                                  }
+                                ]
+                              },
+                              options: {
+                                responsive: true,
+                                plugins: { legend: { display: true } }
+                              }
+                            };
+                            
+                            // Prepare forecastTable for the PDF (show next 7 days of forecast)
+                            const forecastTable = forecastIncome.slice(0, 7).map((item, i) => ({
+                              day: new Date(item.day).toLocaleDateString(),
+                              income: formatCurrency(item.amount),
+                              expenses: formatCurrency(forecastExpenses[i]?.amount || 0)
+                            }));
+                            const res = await fetch('http://localhost:3001/api/reports/forecast-pdf', {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                              },
+                              body: JSON.stringify({
+                                chartData,
+                                summary: `This report shows your historical and forecasted income and expenses for the selected period. Use it to anticipate trends and plan ahead.`,
+                                timeframe: periodMode,
+                                forecastTable
+                              })
+                            });
+                            if (!res.ok) throw new Error('Failed to generate PDF');
+                            const blob = await res.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.style.display = 'none';
+                            a.href = url;
+                            a.download = `forecast-report.pdf`;
+                            document.body.appendChild(a);
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                            toast.success('PDF exported!');
+                          } catch (err) {
+                            console.log(err);
+                            toast.error('Failed to export PDF: ' + (err.message || 'Unknown error'));
+                          }
+                        }}
+                      >
+                        <IconFileDownload className="h-4 w-4" /> Export PDF
+                      </Button>
                     </div>
                   </div>
                   
@@ -242,7 +360,25 @@ export default function ForecastPage() {
                       <TabsTrigger value="income">Income</TabsTrigger>
                       <TabsTrigger value="expenses">Expenses</TabsTrigger>
                     </TabsList>
-                    
+                  {/* Educational Card: What is a Forecast? */}
+                  <Card className="bg-background border border-border text-foreground dark:bg-neutral-900 dark:border-neutral-700 mb-4">
+                    <CardHeader className="flex flex-row items-center gap-4">
+                      <TrendingUp className="h-8 w-8 text-blue-500" />
+                      <div>
+                        <CardTitle>What is a Financial Forecast?</CardTitle>
+                        <CardDescription>
+                          A forecast uses your past income and expense patterns to predict future trends. It helps you anticipate cash flow, spot potential shortfalls, and plan ahead with confidence.
+                        </CardDescription>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="list-disc ml-6 text-sm text-muted-foreground space-y-1">
+                        <li>Forecasts are based on your historical transactions and statistical models.</li>
+                        <li>They show likely trends, not certainties—use them as a guide, not a guarantee.</li>
+                        <li>Regularly updating your data improves forecast accuracy.</li>
+                      </ul>
+                    </CardContent>
+                  </Card>
                     <TabsContent value="income" className="space-y-6">
                       {isLoading ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -478,6 +614,42 @@ export default function ForecastPage() {
                   </Tabs>
                 </div>
               </div>
+            </div>
+            {/* Educational and Informative Section (moved to bottom) */}
+            <div className="px-4 lg:px-6 flex flex-col gap-6 mt-10">
+
+              {/* Informative Alert: How to Read and Use the Forecast */}
+              <Alert className="bg-background border border-border text-foreground dark:bg-neutral-800 dark:border-yellow-700">
+                <Lightbulb className="h-5 w-5 text-yellow-500" />
+                <AlertTitle>How to Read Your Forecast</AlertTitle>
+                <AlertDescription>
+                  <ul className="list-disc ml-5 mt-1 space-y-1">
+                    <li><b>Solid lines</b> show your actual historical data. <b>Dotted lines</b> are the forecasted values for the next period.</li>
+                    <li>Look for trends: Are your expenses rising? Is your income stable?</li>
+                    <li>Use the forecast to plan for upcoming bills, savings, or investments.</li>
+                    <li>If you see a predicted shortfall, consider adjusting your spending or boosting your income.</li>
+                  </ul>
+                </AlertDescription>
+              </Alert>
+              {/* Informative Card: Why Forecasting Matters */}
+              <Card className="bg-background border border-border text-foreground dark:bg-neutral-900 dark:border-green-700">
+                <CardHeader className="flex flex-row items-center gap-4">
+                  <CalendarDays className="h-8 w-8 text-green-500" />
+                  <div>
+                    <CardTitle>Why Use Forecasting?</CardTitle>
+                    <CardDescription>
+                      Forecasting empowers you to make smarter financial decisions and avoid surprises.
+                    </CardDescription>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ul className="list-disc ml-6 text-sm text-muted-foreground space-y-1">
+                    <li>Spot potential cash flow gaps before they happen.</li>
+                    <li>Set realistic savings and spending goals.</li>
+                    <li>Feel more confident about your financial future.</li>
+                  </ul>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>

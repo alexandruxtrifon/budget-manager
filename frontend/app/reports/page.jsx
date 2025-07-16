@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { format, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns';
-import { IconFileDownload, IconChartPie, IconSearch, IconCalendarEvent } from "@tabler/icons-react";
+import { IconFileDownload, IconChartPie, IconSearch, IconCalendarEvent, IconChartBar } from "@tabler/icons-react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { LoadingScreen } from "@/components/ui/spinner";
@@ -57,16 +57,13 @@ import {
   ReferenceLine
 } from 'recharts';
 
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-// import { CalendarIcon } from "@radix-ui/react-icons";
-import { CalendarIcon } from 'lucide-react';
+
 import {
   Alert,
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert";
-import { AlertCircle, AlertTriangle, Info, Check } from "lucide-react";
+import { AlertCircle, AlertTriangle, Info, Check, AlertCircle as AlertCircleIcon, CheckCircle } from "lucide-react";
 
 export default function ReportsPage() {
   const router = useRouter();
@@ -87,6 +84,7 @@ export default function ReportsPage() {
     spendingTrends: [],
     anomalies: []
   });
+  const [activeTab, setActiveTab] = useState('summary');
 
   // Load user data
   useEffect(() => {
@@ -250,6 +248,7 @@ export default function ReportsPage() {
     
     if (user) {
       fetchSpendingData(user.user_id, selectedAccount, newDateRange);
+      fetchSpendingProgressionData(user.user_id, selectedAccount, newDateRange);
     }
   };
 
@@ -257,17 +256,11 @@ export default function ReportsPage() {
     setSelectedAccount(accountId);
     if (user) {
       fetchSpendingData(user.user_id, accountId, dateRange);
+      fetchSpendingProgressionData(user.user_id, accountId, dateRange);
     }
   };
 
-  const handleDateRangeChange = (range) => {
-    if (range.from && range.to) {
-      setDateRange(range);
-      if (user) {
-        fetchSpendingData(user.user_id, selectedAccount, range);
-      }
-    }
-  };
+
 
   const handleExportPDF = async () => {
     try {
@@ -324,6 +317,168 @@ export default function ReportsPage() {
     }
   };
 
+  const handleExportPatternsPDF = async () => {
+    try {
+      toast("Generating patterns PDF report...");
+      
+      const from = format(dateRange.from, 'yyyy-MM-dd');
+      const to = format(dateRange.to, 'yyyy-MM-dd');
+      
+      const res = await fetch('http://localhost:3001/api/reports/patterns-pdf', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          patternData: {
+            weekdayAnalysis: spendingData.weekdayAnalysis,
+            merchantFrequency: spendingData.merchantFrequency
+          },
+          timeframe: selectedTimeframe,
+          accountName: selectedAccount === 'all' ? 'All Accounts' : 
+            accounts.find(acc => acc.account_id.toString() === selectedAccount)?.name || 'Selected Account',
+          currency: accounts[0]?.currency || 'RON',
+          startDate: format(dateRange.from, 'MMM dd, yyyy'),
+          endDate: format(dateRange.to, 'MMM dd, yyyy'),
+          summary: {
+            totalExpenses: spendingData.summary?.totalExpenses || 0,
+            transactionCount: spendingData.summary?.transactionCount || 0
+          }
+        })
+      });
+      
+      if (!res.ok) {
+        throw new Error('Failed to generate patterns report');
+      }
+      
+      // Create blob from response and download
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `spending-patterns-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast.success("Patterns PDF report downloaded successfully");
+    } catch (error) {
+      console.error("Error exporting patterns PDF:", error);
+      toast.error("Failed to generate patterns PDF report");
+    }
+  };
+
+  const handleExportProgressionPDF = async () => {
+    try {
+      toast("Generating spending progression PDF report...");
+      
+      const from = format(dateRange.from, 'yyyy-MM-dd');
+      const to = format(dateRange.to, 'yyyy-MM-dd');
+      
+      const res = await fetch('http://localhost:3001/api/reports/progression-pdf', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          progressionData: {
+            cumulativeSpending: spendingData.cumulativeSpending,
+            spendingStyle: spendingData.spendingStyle,
+            weeklyVelocity: spendingData.weeklyVelocity,
+            highestWeek: spendingData.highestWeek,
+            lowestWeek: spendingData.lowestWeek,
+            weeklyVariance: spendingData.weeklyVariance,
+            paydayImpact: spendingData.paydayImpact,
+            paydaySummary: spendingData.paydaySummary
+          },
+          timeframe: selectedTimeframe,
+          accountName: selectedAccount === 'all' ? 'All Accounts' : 
+            accounts.find(acc => acc.account_id.toString() === selectedAccount)?.name || 'Selected Account',
+          currency: accounts[0]?.currency || 'RON',
+          startDate: format(dateRange.from, 'MMM dd, yyyy'),
+          endDate: format(dateRange.to, 'MMM dd, yyyy'),
+          summary: {
+            totalExpenses: spendingData.summary?.totalExpenses || 0,
+            transactionCount: spendingData.summary?.transactionCount || 0
+          }
+        })
+      });
+      
+      if (!res.ok) {
+        throw new Error('Failed to generate progression report');
+      }
+      
+      // Create blob from response and download
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `spending-progression-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast.success("Spending progression PDF report downloaded successfully");
+    } catch (error) {
+      console.error("Error exporting progression PDF:", error);
+      toast.error("Failed to generate spending progression PDF report");
+    }
+  };
+
+  const handleExportAnomaliesPDF = async () => {
+    try {
+      toast("Generating anomalies PDF report...");
+      
+      const from = format(dateRange.from, 'yyyy-MM-dd');
+      const to = format(dateRange.to, 'yyyy-MM-dd');
+      
+      const res = await fetch('http://localhost:3001/api/reports/anomalies-pdf', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          anomaliesData: {
+            anomalies: spendingData.anomalies,
+            summary: spendingData.summary
+          },
+          timeframe: selectedTimeframe,
+          accountName: selectedAccount === 'all' ? 'All Accounts' : 
+            accounts.find(acc => acc.account_id.toString() === selectedAccount)?.name || 'Selected Account',
+          currency: accounts[0]?.currency || 'RON',
+          startDate: format(dateRange.from, 'MMM dd, yyyy'),
+          endDate: format(dateRange.to, 'MMM dd, yyyy'),
+          summary: {
+            totalExpenses: spendingData.summary?.totalExpenses || 0,
+            transactionCount: spendingData.summary?.transactionCount || 0
+          }
+        })
+      });
+      
+      if (!res.ok) {
+        throw new Error('Failed to generate anomalies report');
+      }
+      
+      // Create blob from response and download
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `spending-anomalies-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast.success("Anomalies PDF report downloaded successfully");
+    } catch (error) {
+      console.error("Error exporting anomalies PDF:", error);
+      toast.error("Failed to generate anomalies PDF report");
+    }
+  };
+
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('en-US', {
@@ -355,12 +510,12 @@ export default function ReportsPage() {
                 Analyze your spending behavior and identify patterns
               </p>
             </div>
-            <div className="flex gap-2">
+            {/* <div className="flex gap-2">
               <Button variant="outline" onClick={handleExportPDF}>
                 <IconFileDownload className="mr-2 h-4 w-4" />
                 Export PDF
               </Button>
-            </div>
+            </div> */}
           </div>
 
           {/* Filters */}
@@ -402,39 +557,7 @@ export default function ReportsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex-1 min-w-[250px]">
-            <Popover>
-                <PopoverTrigger asChild>
-                <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal"
-                >
-                    {/* <Calendar className="mr-2 h-4 w-4" /> */}
-                    {dateRange?.from ? (
-                    dateRange.to ? (
-                        <>
-                        {format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}
-                        </>
-                    ) : (
-                        format(dateRange.from, "LLL dd, y")
-                    )
-                    ) : (
-                    <span>Pick a date range</span>
-                    )}
-                </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                    initialFocus
-                    mode="range"
-                    defaultMonth={dateRange?.from}
-                    selected={dateRange}
-                    onSelect={handleDateRangeChange}
-                    numberOfMonths={2}
-                />
-                </PopoverContent>
-            </Popover>
-            </div>
+
           </div>
 
           {/* Spending Summary */}
@@ -497,7 +620,7 @@ export default function ReportsPage() {
           </div> */}
 
           {/* Charts */}
-          <Tabs defaultValue="summary" className="space-y-4">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
             <TabsList>
               <TabsTrigger value="summary">Summary</TabsTrigger>
               <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -729,6 +852,70 @@ export default function ReportsPage() {
             </TabsContent>
             
             <TabsContent value="trends" className="space-y-4">
+              {/* Educational Cards */}
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-blue-800 dark:text-blue-300 text-lg flex items-center gap-2">
+                      <IconChartBar className="h-5 w-5" />
+                      What Are Spending Trends?
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm text-blue-700 dark:text-blue-300">
+                    <p className="mb-2">
+                      Spending trends show how your financial behavior changes over time. 
+                      They help you identify:
+                    </p>
+                    <ul className="list-disc ml-4 space-y-1 text-xs">
+                      <li>Rising or falling spending patterns</li>
+                      <li>Seasonal variations in expenses</li>
+                      <li>Long-term financial trajectory</li>
+                      <li>Impact of lifestyle changes</li>
+                    </ul>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-green-800 dark:text-green-300 text-lg flex items-center gap-2">
+                      <IconCalendarEvent className="h-5 w-5" />
+                      Understanding Monthly Trends
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm text-green-700 dark:text-green-300">
+                    <p className="mb-2">
+                      The bar chart compares monthly spending:
+                    </p>
+                    <ul className="list-disc ml-4 space-y-1 text-xs">
+                      <li>Green bars show actual spending</li>
+                      <li>Purple bars show average amounts</li>
+                      <li>Compare months to spot patterns</li>
+                      <li>Identify seasonal variations</li>
+                    </ul>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-800">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-purple-800 dark:text-purple-300 text-lg flex items-center gap-2">
+                      <IconSearch className="h-5 w-5" />
+                      Trend Analysis Tips
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm text-purple-700 dark:text-purple-300">
+                    <p className="mb-2">
+                      When analyzing your trends:
+                    </p>
+                    <ul className="list-disc ml-4 space-y-1 text-xs">
+                      <li>Look for consistent patterns</li>
+                      <li>Identify unusual spikes or drops</li>
+                      <li>Consider external factors</li>
+                      <li>Plan for seasonal changes</li>
+                    </ul>
+                  </CardContent>
+                </Card>
+              </div>
+
               <Card>
                 <CardHeader>
                   <CardTitle>Spending Trends</CardTitle>
@@ -753,9 +940,182 @@ export default function ReportsPage() {
                   </div>
                 </CardContent>
               </Card>
+                            {/* Trend Analysis Tips */}
+                            <Card className="bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700">
+                <CardHeader>
+                  <CardTitle className="text-slate-800 dark:text-slate-200">How to Use Trend Analysis</CardTitle>
+                  <CardDescription className="text-slate-600 dark:text-slate-400">
+                    Tips for interpreting and acting on your spending trends
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                      <div>
+                        <h4 className="font-medium text-blue-700 dark:text-blue-400">Identify Long-term Patterns</h4>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                          Look for consistent upward or downward trends in your spending. A steady increase might indicate 
+                          lifestyle inflation, while a decrease could show improved financial discipline.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-3 h-3 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                      <div>
+                        <h4 className="font-medium text-green-700 dark:text-green-400">Spot Seasonal Variations</h4>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                          Notice if certain months consistently show higher or lower spending. This could be due to 
+                          holidays, seasonal expenses, or annual events that affect your budget.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-3 h-3 bg-purple-500 rounded-full mt-2 flex-shrink-0"></div>
+                      <div>
+                        <h4 className="font-medium text-purple-700 dark:text-purple-400">Plan for the Future</h4>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                          Use trend insights to anticipate future expenses and adjust your budget accordingly. 
+                          If you see a pattern, you can plan ahead and avoid financial stress.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                    <p className="text-sm text-amber-700 dark:text-amber-300">
+                      <strong>Pro Tip:</strong> Compare your spending trends with your income trends to ensure 
+                      your expenses remain sustainable and aligned with your financial goals.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
             
             <TabsContent value="patterns" className="space-y-4">
+              {/* Export Button for Patterns */}
+              <div className="flex justify-end mb-4">
+                <Button variant="outline" onClick={handleExportPatternsPDF}>
+                  <IconFileDownload className="mr-2 h-4 w-4" />
+                  Export Patterns PDF
+                </Button>
+              </div>
+
+              {/* Educational Cards */}
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <Card className="bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-800">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-purple-800 dark:text-purple-300 text-lg flex items-center gap-2">
+                      <IconChartBar className="h-5 w-5" />
+                      What Are Spending Patterns?
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm text-purple-700 dark:text-purple-300">
+                    <p className="mb-2">
+                      Spending patterns reveal your financial habits and behaviors over time. 
+                      They help you understand:
+                    </p>
+                    <ul className="list-disc ml-4 space-y-1 text-xs">
+                      <li>When you spend the most money</li>
+                      <li>Where you shop most frequently</li>
+                      <li>Your preferred shopping days</li>
+                      <li>Recurring spending behaviors</li>
+                    </ul>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-indigo-50 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-indigo-800 dark:text-indigo-300 text-lg flex items-center gap-2">
+                      <IconCalendarEvent className="h-5 w-5" />
+                      Understanding Weekday Analysis
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm text-indigo-700 dark:text-indigo-300">
+                    <p className="mb-2">
+                      The radar chart shows your spending by day of the week:
+                    </p>
+                    <ul className="list-disc ml-4 space-y-1 text-xs">
+                      <li>Peaks indicate your highest spending days</li>
+                      <li>Valleys show your lowest spending days</li>
+                      <li>Weekend vs weekday patterns</li>
+                      <li>Payday influence on spending</li>
+                    </ul>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-teal-50 dark:bg-teal-950/20 border-teal-200 dark:border-teal-800">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-teal-800 dark:text-teal-300 text-lg flex items-center gap-2">
+                      <IconSearch className="h-5 w-5" />
+                      Merchant Frequency Insights
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm text-teal-700 dark:text-teal-300">
+                    <p className="mb-2">
+                      This chart reveals your shopping habits:
+                    </p>
+                    <ul className="list-disc ml-4 space-y-1 text-xs">
+                      <li>Most visited merchants</li>
+                      <li>Total spent at each location</li>
+                      <li>Frequency vs amount patterns</li>
+                      <li>Potential optimization opportunities</li>
+                    </ul>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Pattern Analysis Tips */}
+              <Card className="bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700">
+                <CardHeader>
+                  <CardTitle className="text-slate-800 dark:text-slate-200">How to Use Pattern Analysis</CardTitle>
+                  <CardDescription className="text-slate-600 dark:text-slate-400">
+                    Tips for interpreting and acting on your spending patterns
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-3 h-3 bg-purple-500 rounded-full mt-2 flex-shrink-0"></div>
+                      <div>
+                        <h4 className="font-medium text-purple-700 dark:text-purple-400">Identify Peak Spending Days</h4>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                          Look for days with the highest spending. Are these paydays, weekends, or specific events? 
+                          Understanding your peak days can help you plan better and avoid overspending.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-3 h-3 bg-indigo-500 rounded-full mt-2 flex-shrink-0"></div>
+                      <div>
+                        <h4 className="font-medium text-indigo-700 dark:text-indigo-400">Analyze Merchant Patterns</h4>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                          Check which merchants you visit most frequently. High frequency with low amounts might indicate 
+                          daily necessities, while high amounts might suggest luxury or impulse purchases.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-3 h-3 bg-teal-500 rounded-full mt-2 flex-shrink-0"></div>
+                      <div>
+                        <h4 className="font-medium text-teal-700 dark:text-teal-400">Optimize Your Spending</h4>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                          Use pattern insights to make better financial decisions. Consider consolidating purchases, 
+                          finding alternatives for frequent high-cost merchants, or adjusting your shopping schedule.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      <strong>Pro Tip:</strong> Compare patterns across different time periods to see how your 
+                      spending habits evolve and identify seasonal trends or lifestyle changes.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
               <div className="grid gap-4 md:grid-cols-2">
                 <Card>
                   <CardHeader>
@@ -811,6 +1171,123 @@ export default function ReportsPage() {
             </TabsContent>
             
             <TabsContent value="anomalies" className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold">Spending Anomalies</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Unusual spending patterns and detection analysis
+                  </p>
+                </div>
+                <Button variant="outline" onClick={handleExportAnomaliesPDF}>
+                  <IconFileDownload className="mr-2 h-4 w-4" />
+                  Export PDF
+                </Button>
+              </div>
+              
+              {/* Educational Cards */}
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-blue-800 dark:text-blue-300 text-lg flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5" />
+                      What Are Anomalies?
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm text-blue-700 dark:text-blue-300">
+                    <p className="mb-2">
+                      Anomalies are unusual spending patterns that stand out from your normal behavior. 
+                      They can indicate:
+                    </p>
+                    <ul className="list-disc ml-4 space-y-1 text-xs">
+                      <li>Unusually large transactions</li>
+                      <li>Spending spikes in specific categories</li>
+                      <li>Deviations from your typical spending patterns</li>
+                    </ul>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-amber-800 dark:text-amber-300 text-lg flex items-center gap-2">
+                      <Info className="h-5 w-5" />
+                      How We Detect Them
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm text-amber-700 dark:text-amber-300">
+                    <p className="mb-2">
+                      Our system analyzes your spending using:
+                    </p>
+                    <ul className="list-disc ml-4 space-y-1 text-xs">
+                      <li>Statistical analysis of transaction amounts</li>
+                      <li>Category-specific spending patterns</li>
+                      <li>Comparison to your historical averages</li>
+                      <li>Machine learning algorithms</li>
+                    </ul>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-green-800 dark:text-green-300 text-lg flex items-center gap-2">
+                      <CheckCircle className="h-5 w-5" />
+                      What to Do
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm text-green-700 dark:text-green-300">
+                    <p className="mb-2">
+                      When you see an anomaly:
+                    </p>
+                    <ul className="list-disc ml-4 space-y-1 text-xs">
+                      <li>Review if it was necessary spending</li>
+                      <li>Check if it fits your budget</li>
+                      <li>Consider if it's a one-time expense</li>
+                      <li>Look for patterns in similar anomalies</li>
+                    </ul>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Anomaly Types Explanation */}
+              <Card className="bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700">
+                <CardHeader>
+                  <CardTitle className="text-slate-800 dark:text-slate-200">Types of Anomalies</CardTitle>
+                  <CardDescription className="text-slate-600 dark:text-slate-400">
+                    Understanding the different types of unusual spending patterns we detect
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-3 h-3 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
+                      <div>
+                        <h4 className="font-medium text-red-700 dark:text-red-400">Large Transaction Anomaly</h4>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                          A transaction that's significantly larger than your typical spending (more than 2x your average transaction amount). 
+                          This could be a major purchase, emergency expense, or unusual payment.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-3 h-3 bg-orange-500 rounded-full mt-2 flex-shrink-0"></div>
+                      <div>
+                        <h4 className="font-medium text-orange-700 dark:text-orange-400">Category Anomaly</h4>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                          Unusual spending in a specific category compared to your historical patterns (more than 3x your average for that category). 
+                          This might indicate a new habit, one-time expense, or changing priorities.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      <strong>Note:</strong> Our anomaly detection focuses on amount-based patterns. 
+                      We analyze transaction sizes and category spending to identify unusual behavior.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader>
                   <CardTitle>Spending Anomalies</CardTitle>
@@ -820,9 +1297,9 @@ export default function ReportsPage() {
                   {spendingData.anomalies && spendingData.anomalies.length > 0 ? (
                     <div className="space-y-4">
                       {spendingData.anomalies.map((anomaly, index) => (
-                        <div key={index} className="border rounded-lg p-4 bg-amber-50">
+                        <div key={index} className="border rounded-lg p-4 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
                           <div className="flex items-center gap-2 mb-2">
-                            <div className="text-amber-600 font-medium">{anomaly.type}</div>
+                            <div className="text-amber-600 dark:text-amber-400 font-medium">{anomaly.type}</div>
                             <div className="text-sm text-muted-foreground">{anomaly.date}</div>
                           </div>
                           <p className="text-sm">{anomaly.description}</p>
@@ -844,6 +1321,19 @@ export default function ReportsPage() {
               </Card>
             </TabsContent>
             <TabsContent value="spending-progression" className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold">Spending Progression Analysis</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Analyze your spending patterns and cash flow management
+                  </p>
+                </div>
+                <Button variant="outline" onClick={handleExportProgressionPDF}>
+                  <IconFileDownload className="mr-2 h-4 w-4" />
+                  Export PDF
+                </Button>
+              </div>
+              
               {/* Spending Style Insight Alert */}
               <Alert variant={
                 spendingData.spendingStyle?.type === "Front-Loader" ? "destructive" : 
@@ -976,7 +1466,7 @@ export default function ReportsPage() {
                       </ResponsiveContainer>
                     </div>
                     {/* Add an explanatory alert below the chart */}
-                    <Alert className="mt-4 bg-slate-50 border-slate-200">
+                    <Alert className="mt-4 bg-muted/50 border-border">
                       <Info className="h-5 w-5" />
                       <AlertTitle>What This Shows</AlertTitle>
                       <AlertDescription>
@@ -1036,7 +1526,7 @@ export default function ReportsPage() {
                         </div>
                       </div>
                       {/* Add an explanatory alert for this chart */}
-                      <Alert className="bg-slate-50 border-slate-200">
+                      <Alert className="bg-muted/50 border-border">
                         <Info className="h-5 w-5" />
                         <AlertTitle>Cash Flow Management</AlertTitle>
                         <AlertDescription>
@@ -1091,19 +1581,19 @@ export default function ReportsPage() {
                       </ResponsiveContainer>
                     </div>
                     <div className="mt-4 grid grid-cols-2 gap-4">
-                      <div className="p-3 rounded-lg bg-slate-50">
+                      <div className="p-3 rounded-lg bg-muted/50 border border-border">
                         <p className="text-sm font-medium">Pre-Payday (5 days before)</p>
                         <p className="text-xl font-bold mt-1">{formatCurrency(spendingData.paydaySummary?.prePayday || 0)}</p>
                         <p className="text-xs text-muted-foreground">avg. daily spending</p>
                       </div>
-                      <div className="p-3 rounded-lg bg-slate-50">
+                      <div className="p-3 rounded-lg bg-muted/50 border border-border">
                         <p className="text-sm font-medium">Post-Payday (5 days after)</p>
                         <p className="text-xl font-bold mt-1">{formatCurrency(spendingData.paydaySummary?.postPayday || 0)}</p>
                         <p className="text-xs text-muted-foreground">avg. daily spending</p>
                       </div>
                     </div>
                     {/* Add an explanatory alert for the payday impact */}
-                    <Alert className="mt-4 bg-slate-50 border-slate-200">
+                    <Alert className="mt-4 bg-muted/50 border-border">
                       <Info className="h-5 w-5" />
                       <AlertTitle>Payday Influence</AlertTitle>
                       <AlertDescription>

@@ -11,10 +11,19 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import { useRouter } from "next/navigation";
+import { useNavigation } from "@/components/navigation-provider";
 
 const Hero = () => {
   const [videoOpen, setVideoOpen] = useState(false);
+  const { startNavigation } = useNavigation();
+  const router = useRouter();
 
+  const handleNavigate = (path) => {
+    startNavigation(() => {
+    router.push(path);
+    });
+};
   return (
     <>
     <div className="min-h-[calc(100vh-6rem)] flex flex-col items-center py-20 px-6">
@@ -34,6 +43,7 @@ const Hero = () => {
             <Button
               size="lg"
               className="w-full sm:w-auto rounded-full text-base bg-white text-gray-900 border border-gray-200 hover:bg-gray-200"
+              onClick={() => handleNavigate('/register')}
             >
               Get Started <ArrowUpRight className="!h-5 !w-5" />
             </Button>

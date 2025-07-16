@@ -36,6 +36,16 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 
 export default function TransactionsPage() {
   const router = useRouter();
@@ -47,6 +57,16 @@ export default function TransactionsPage() {
   const [filterAccount, setFilterAccount] = useState('all');
   const [filterType, setFilterType] = useState('all');
   const [timeframe, setTimeframe] = useState('month');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addForm, setAddForm] = useState({
+    amount: '',
+    transaction_type: 'expense',
+    account_id: '',
+    category_id: '',
+    description: '',
+    transaction_date: new Date().toISOString().slice(0, 10),
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleUserUpdate = (updatedUser) => {
     setUser({ ...updatedUser });
@@ -132,6 +152,50 @@ export default function TransactionsPage() {
     return matchesSearch && matchesAccount && matchesType;
   });
 
+  const handleAddFormChange = (e) => {
+    const { name, value } = e.target;
+    setAddForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleAddTransaction = async (e) => {
+    e.preventDefault();
+    if (!user) return;
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('http://localhost:3001/api/transactions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          ...addForm,
+          user_id: user.user_id,
+          currency: accounts.find(a => a.account_id.toString() === addForm.account_id)?.currency || accounts[0]?.currency || 'USD',
+        })
+      });
+      if (res.ok) {
+        toast.success('Transaction added!');
+        setShowAddModal(false);
+        setAddForm({
+          amount: '',
+          transaction_type: 'expense',
+          account_id: '',
+          category_id: '',
+          description: '',
+          transaction_date: new Date().toISOString().slice(0, 10),
+        });
+        fetchData();
+      } else {
+        toast.error('Failed to add transaction');
+      }
+    } catch (err) {
+      toast.error('Error adding transaction');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (isLoading || !user) {
     return <LoadingScreen message="Loading transactions..." />;
   }
@@ -160,6 +224,95 @@ export default function TransactionsPage() {
                 >
                   Refresh Data
                 </Button>
+                <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+                  <DialogTrigger asChild>
+                    <Button variant="default" onClick={() => setShowAddModal(true)}>
+                      + Add Transaction
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add Transaction</DialogTitle>
+                      <DialogDescription>Manually add a new transaction</DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleAddTransaction} className="space-y-4">
+                      <div className="flex gap-2">
+                        <Input
+                          name="amount"
+                          type="number"
+                          step="0.01"
+                          placeholder="Amount"
+                          value={addForm.amount}
+                          onChange={handleAddFormChange}
+                          required
+                        />
+                        <Select
+                          value={addForm.transaction_type}
+                          onValueChange={val => setAddForm(f => ({ ...f, transaction_type: val }))}
+                        >
+                          <SelectTrigger className="w-[140px]">
+                            <SelectValue placeholder="Type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="income">Income</SelectItem>
+                            <SelectItem value="expense">Expense</SelectItem>
+                            <SelectItem value="transfer">Transfer</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex gap-2">
+                        <Select
+                          value={addForm.account_id}
+                          onValueChange={val => setAddForm(f => ({ ...f, account_id: val }))}
+                          required
+                        >
+                          <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Select Account" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="select_account">Select Account</SelectItem>
+                            {accounts.map(account => (
+                              <SelectItem key={account.account_id} value={account.account_id.toString()}>{account.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select
+                          value={addForm.category_id}
+                          onValueChange={val => setAddForm(f => ({ ...f, category_id: val }))}
+                        >
+                          <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Select Category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={null}>Auto (by description)</SelectItem>
+                            {/* Optionally, you can fetch and map categories here if available */}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Input
+                        name="description"
+                        placeholder="Description"
+                        value={addForm.description}
+                        onChange={handleAddFormChange}
+                      />
+                      <Input
+                        name="transaction_date"
+                        type="date"
+                        value={addForm.transaction_date}
+                        onChange={handleAddFormChange}
+                        required
+                      />
+                      <DialogFooter>
+                        <Button type="submit" disabled={isSubmitting}>
+                          {isSubmitting ? 'Adding...' : 'Add Transaction'}
+                        </Button>
+                        <DialogClose asChild>
+                          <Button type="button" variant="outline">Cancel</Button>
+                        </DialogClose>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
               </div>
             </div>
             

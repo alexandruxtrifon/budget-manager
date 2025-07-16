@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spending Progression Report</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: white;
+            color: #333;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #2563eb;
+            margin: 0;
+            font-size: 28px;
+        }
+        .header p {
+            color: #6b7280;
+            margin: 5px 0 0 0;
+        }
+        .report-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            padding: 15px;
+            background-color: #f8fafc;
+            border-radius: 8px;
+        }
+        .info-item {
+            text-align: center;
+        }
+        .info-label {
+            font-size: 12px;
+            color: #6b7280;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        .info-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-top: 5px;
+        }
+        .section {
+            margin-bottom: 40px;
+        }
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .chart-container {
+            margin: 20px 0;
+            page-break-inside: avoid;
+        }
+        .chart-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 10px;
+        }
+        .chart-description {
+            font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 15px;
+        }
+        .educational-content {
+            background-color: #f0f9ff;
+            border: 1px solid #0ea5e9;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .educational-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #0369a1;
+            margin-bottom: 15px;
+        }
+        .educational-text {
+            font-size: 14px;
+            color: #0c4a6e;
+            line-height: 1.6;
+        }
+        .tips-list {
+            margin-top: 15px;
+        }
+        .tips-list li {
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            text-align: center;
+            font-size: 12px;
+            color: #6b7280;
+        }
+        .page-break {
+            page-break-before: always;
+        }
+        .spending-style {
+            background-color: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .spending-style h3 {
+            color: #92400e;
+            margin: 0 0 10px 0;
+            font-size: 16px;
+        }
+        .spending-style p {
+            color: #78350f;
+            margin: 0;
+            font-size: 14px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background-color: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 12px;
+            text-align: center;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 5px;
+        }
+        .stat-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Spending Progression Analysis</h1>
+        <p>Generated on {{date}} for {{userName}}</p>
+    </div>
+
+    <div class="report-info">
+        <div class="info-item">
+            <div class="info-label">Account</div>
+            <div class="info-value">{{accountName}}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Timeframe</div>
+            <div class="info-value">{{timeframe}}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Period</div>
+            <div class="info-value">{{startDate}} - {{endDate}}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Total Spent</div>
+            <div class="info-value">{{currency}} {{summary.totalExpenses}}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Transactions</div>
+            <div class="info-value">{{summary.transactionCount}}</div>
+        </div>
+    </div>
+
+    <div class="educational-content">
+        <div class="educational-title">Understanding Your Spending Progression</div>
+        <div class="educational-text">
+            This report analyzes how your spending progresses throughout the month, revealing your cash flow management patterns. 
+            Understanding your spending progression helps identify if you're pacing your expenses well or if you're experiencing 
+            feast/famine cycles that can lead to financial stress.
+        </div>
+        <div class="tips-list">
+            <strong>Key Insights to Look For:</strong>
+            <ul>
+                <li><strong>Spending Rhythm:</strong> Whether you're a front-loader, back-loader, or balanced spender</li>
+                <li><strong>Cash Flow Management:</strong> How consistently you spend throughout the period</li>
+                <li><strong>Payday Impact:</strong> How receiving income affects your spending behavior</li>
+                <li><strong>Week-to-Week Variance:</strong> Consistency in your weekly spending patterns</li>
+            </ul>
+        </div>
+    </div>
+
+    {{#if spendingStyle.type}}
+    <div class="spending-style">
+        <h3>Your Spending Rhythm: {{spendingStyle.type}}</h3>
+        <p>
+            {{#if spendingStyle.isFrontLoader}}
+            You tend to spend more freely at the beginning of the month when you have more money available. 
+            Consider pacing your spending more evenly to avoid end-of-month constraints.
+            {{else if spendingStyle.isBackLoader}}
+            You're notably conservative with spending early in the month but increase spending later. 
+            While this shows discipline, consider if delaying needed expenses creates stress.
+            {{else}}
+            You maintain relatively consistent spending throughout the month, showing good financial discipline and pacing.
+            {{/if}}
+        </p>
+    </div>
+    {{/if}}
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Week-to-Week Variance</div>
+            <div class="stat-value">{{weeklyVariance}}%</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Highest Spending Week</div>
+            <div class="stat-value">{{highestWeek.week}}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Lowest Spending Week</div>
+            <div class="stat-value">{{lowestWeek.week}}</div>
+        </div>
+        {{#if paydaySummary}}
+        <div class="stat-card">
+            <div class="stat-label">Payday Impact</div>
+            <div class="stat-value">{{paydaySummary.changePercentage}}%</div>
+        </div>
+        {{/if}}
+    </div>
+
+    <div class="section">
+        <div class="section-title">Cumulative Spending Curve</div>
+        <div class="chart-description">
+            This chart compares your actual spending pattern (red line) to an ideal linear pace (green line) and your historical average (purple line). 
+            The closer your line follows the green ideal line, the more evenly you're pacing your spending.
+        </div>
+        <div class="chart-container">
+            <canvas id="cumulativeChart" width="400" height="300"></canvas>
+        </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <div class="section">
+        <div class="section-title">Daily Spending Velocity</div>
+        <div class="chart-description">
+            This chart shows your average daily spending by week of the month, revealing which weeks you spend most heavily.
+        </div>
+        <div class="chart-container">
+            <canvas id="velocityChart" width="400" height="300"></canvas>
+        </div>
+    </div>
+
+    {{#if paydayImpact}}
+    <div class="section">
+        <div class="section-title">Payday Impact Analysis</div>
+        <div class="chart-description">
+            How your spending changes around paydays, showing the influence of income timing on your spending behavior.
+        </div>
+        <div class="chart-container">
+            <canvas id="paydayChart" width="400" height="300"></canvas>
+        </div>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Pre-Payday (5 days before)</div>
+                <div class="stat-value">{{currency}} {{paydaySummary.prePayday}}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Post-Payday (5 days after)</div>
+                <div class="stat-value">{{currency}} {{paydaySummary.postPayday}}</div>
+            </div>
+        </div>
+    </div>
+    {{/if}}
+
+    <div class="section">
+        <div class="section-title">Progression Analysis Tips</div>
+        <div class="educational-text">
+            <strong>How to Use This Information:</strong>
+        </div>
+        <div class="tips-list">
+            <ul>
+                <li><strong>Identify Your Pattern:</strong> Are you a front-loader, back-loader, or balanced spender? Understanding your pattern helps you make informed decisions about timing expenses.</li>
+                <li><strong>Monitor Variance:</strong> High week-to-week variance indicates feast/famine cycles that can create financial stress. Aim for more consistent spending.</li>
+                <li><strong>Payday Awareness:</strong> If your spending spikes after payday, consider implementing a budget that allocates funds to last the entire period.</li>
+                <li><strong>Cash Flow Optimization:</strong> Use these insights to adjust your spending timing and create a more sustainable financial rhythm.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Report generated by Budget Manager Web | {{date}}</p>
+    </div>
+
+    <script>
+        // Wait for Chart.js to load and then render charts
+        function renderCharts() {
+            // Cumulative Spending Chart
+            const cumulativeCtx = document.getElementById('cumulativeChart').getContext('2d');
+            const cumulativeData = JSON.parse('{{{cumulativeSpending}}}');
+            
+            if (cumulativeData && cumulativeData.length > 0) {
+                new Chart(cumulativeCtx, {
+                    type: 'line',
+                    data: {
+                        labels: cumulativeData.map(item => item.day),
+                        datasets: [{
+                            label: 'Current Month',
+                            data: cumulativeData.map(item => item.current),
+                            borderColor: '#f87171',
+                            backgroundColor: 'rgba(248, 113, 113, 0.1)',
+                            borderWidth: 2,
+                            fill: false
+                        }, {
+                            label: 'Average Pattern',
+                            data: cumulativeData.map(item => item.average),
+                            borderColor: '#8884d8',
+                            backgroundColor: 'rgba(136, 132, 216, 0.1)',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            fill: false
+                        }, {
+                            label: 'Linear Ideal',
+                            data: cumulativeData.map(item => item.ideal),
+                            borderColor: '#4ade80',
+                            backgroundColor: 'rgba(74, 222, 128, 0.1)',
+                            borderWidth: 2,
+                            borderDash: [3, 3],
+                            fill: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.dataset.label + ': {{currency}} ' + context.parsed.y.toFixed(2);
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '{{currency}} ' + value.toFixed(0);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Velocity Chart
+            const velocityCtx = document.getElementById('velocityChart').getContext('2d');
+            const velocityData = JSON.parse('{{{weeklyVelocity}}}');
+            
+            if (velocityData && velocityData.length > 0) {
+                new Chart(velocityCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: velocityData.map(item => item.week),
+                        datasets: [{
+                            label: 'Avg Daily Spend',
+                            data: velocityData.map(item => item.averageDaily),
+                            backgroundColor: 'rgba(136, 132, 216, 0.8)',
+                            borderColor: 'rgba(136, 132, 216, 1)',
+                            borderWidth: 1
+                        }, {
+                            label: 'Total Spent',
+                            data: velocityData.map(item => item.totalSpent),
+                            backgroundColor: 'rgba(130, 202, 157, 0.8)',
+                            borderColor: 'rgba(130, 202, 157, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y',
+                        plugins: {
+                            legend: {
+                                position: 'top'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.dataset.label + ': {{currency}} ' + context.parsed.x.toFixed(2);
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '{{currency}} ' + value.toFixed(0);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Payday Impact Chart
+            const paydayCtx = document.getElementById('paydayChart');
+            if (paydayCtx) {
+                const paydayData = JSON.parse('{{{paydayImpact}}}');
+                
+                if (paydayData && paydayData.length > 0) {
+                    new Chart(paydayCtx.getContext('2d'), {
+                        type: 'line',
+                        data: {
+                            labels: paydayData.map(item => item.day),
+                            datasets: [{
+                                label: 'Daily Spending',
+                                data: paydayData.map(item => item.spending),
+                                borderColor: '#f87171',
+                                backgroundColor: 'rgba(248, 113, 113, 0.1)',
+                                borderWidth: 2,
+                                fill: false,
+                                pointRadius: 4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'top'
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            return 'Daily Spending: {{currency}} ' + context.parsed.y.toFixed(2);
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        callback: function(value) {
+                                            return '{{currency}} ' + value.toFixed(0);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
+        // Try to render charts when Chart.js is available
+        if (typeof Chart !== 'undefined') {
+            renderCharts();
+        } else {
+            // Wait for Chart.js to load
+            let attempts = 0;
+            const maxAttempts = 10;
+            const checkChart = setInterval(() => {
+                attempts++;
+                if (typeof Chart !== 'undefined') {
+                    clearInterval(checkChart);
+                    renderCharts();
+                } else if (attempts >= maxAttempts) {
+                    clearInterval(checkChart);
+                    console.error('Chart.js failed to load');
+                }
+            }, 500);
+        }
+    </script>
+</body>
+</html> 

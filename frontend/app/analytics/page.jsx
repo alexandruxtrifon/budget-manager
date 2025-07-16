@@ -314,7 +314,7 @@ const exportToPDF = async () => {
           }
         })(),
         accountName: account?.name || 'All Accounts',
-        currency: account?.currency || 'EUR',
+        currency: account?.currency || 'RON',
         startDate: formattedStartDate,
         endDate: formattedEndDate,
         summary

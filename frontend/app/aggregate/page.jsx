@@ -9,6 +9,7 @@ import {
   CartesianGrid, Tooltip, Legend, ResponsiveContainer 
 } from 'recharts';
 import { IconUsers, IconArrowUpRight, IconArrowDownRight, IconClock, IconCalendarStats, IconFileImport, IconListCheck } from '@tabler/icons-react';
+//import { saveAs } from 'file-saver';
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
@@ -74,6 +75,7 @@ export default function AggregatePage() {
     activityByType: [],
     userActivity: []
   });
+  const [users, setUsers] = useState([]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -116,6 +118,29 @@ export default function AggregatePage() {
     }
   }, [logs, timeframe]);
 
+  useEffect(() => {
+    fetchStats();
+  }, [timeframe]);
+
+  useEffect(() => {
+    // Fetch all users for admin
+    const fetchUsers = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('http://localhost:3001/api/users', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setUsers(data);
+        }
+      } catch (err) {
+        // ignore
+      }
+    };
+    fetchUsers();
+  }, []);
+
   const fetchLogs = async () => {
     try {
       const res = await fetch('http://localhost:3001/api/logs/all', {
@@ -140,7 +165,7 @@ export default function AggregatePage() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch('http://localhost:3001/api/logs/stats', {
+      const res = await fetch(`http://localhost:3001/api/logs/stats?timeframe=${timeframe}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -284,6 +309,11 @@ export default function AggregatePage() {
   const formatDateTime = (dateString) => {
     return format(new Date(dateString), 'MMM dd, yyyy HH:mm:ss');
   };
+
+  // Helper for user activity summary
+  const totalUsers = users.length;
+  const activeUserEmails = Array.from(new Set(logs.map(l => l.email)));
+  const activeUsers = activeUserEmails.length;
 
   if (isLoading || !user) {
     return <LoadingScreen message="Loading aggregate data..." />;
@@ -477,6 +507,59 @@ export default function AggregatePage() {
                   <CardHeader>
                     <CardTitle>Activity Over Time</CardTitle>
                     <CardDescription>System activity trend for the selected time period</CardDescription>
+                    <Button
+                      className="mt-2"
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          const token = localStorage.getItem('token');
+                          const res = await fetch('http://localhost:3001/api/reports/activity-trends-pdf', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                              chartData: {
+                                type: 'line',
+                                data: {
+                                  labels: chartData.activityByDay.map(d => d.date),
+                                  datasets: [{
+                                    label: 'Activity Count',
+                                    data: chartData.activityByDay.map(d => d.count),
+                                    borderColor: '#8884d8',
+                                    backgroundColor: 'rgba(136,132,216,0.2)',
+                                    fill: true
+                                  }]
+                                },
+                                options: {
+                                  responsive: true,
+                                  plugins: { legend: { display: true } }
+                                }
+                              },
+                              summary: `Total activity: ${chartData.activityByDay.reduce((sum, d) => sum + d.count, 0)}`,
+                              timeframe,
+                              activityData: chartData.activityByDay
+                            })
+                          });
+                          if (!res.ok) throw new Error('Failed to generate PDF');
+                          const blob = await res.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.style.display = 'none';
+                          a.href = url;
+                          a.download = `activity-trends-report.pdf`;
+                          document.body.appendChild(a);
+                          a.click();
+                          window.URL.revokeObjectURL(url);
+                          toast.success('PDF exported!');
+                        } catch (err) {
+                          toast.error('Failed to export PDF');
+                        }
+                      }}
+                    >
+                      Export PDF
+                    </Button>
                   </CardHeader>
                   <CardContent className="h-[400px]">
                     <ResponsiveContainer width="100%" height="100%">
@@ -506,6 +589,62 @@ export default function AggregatePage() {
                   <CardHeader>
                     <CardTitle>Most Active Users</CardTitle>
                     <CardDescription>Top users by activity count in the selected time period</CardDescription>
+                    <Button
+                      className="mt-2"
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          const token = localStorage.getItem('token');
+                          const res = await fetch('http://localhost:3001/api/reports/user-activity-pdf', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                              chartData: {
+                                type: 'bar',
+                                data: {
+                                  labels: chartData.userActivity.map(d => d.email),
+                                  datasets: [{
+                                    label: 'Activity Count',
+                                    data: chartData.userActivity.map(d => d.count),
+                                    backgroundColor: 'rgba(130,202,157,0.7)',
+                                    borderColor: '#82ca9d',
+                                    borderWidth: 1
+                                  }]
+                                },
+                                options: {
+                                  indexAxis: 'y',
+                                  responsive: true,
+                                  plugins: { legend: { display: true } }
+                                }
+                              },
+                              summary: `Total users: ${totalUsers}, Active this period: ${activeUsers}, Most active: ${chartData.userActivity[0]?.email || 'N/A'} (${chartData.userActivity[0]?.count || 0} actions)`,
+                              timeframe,
+                              userActivityData: chartData.userActivity,
+                              totalUsers,
+                              activeUsers
+                            })
+                          });
+                          if (!res.ok) throw new Error('Failed to generate PDF');
+                          const blob = await res.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.style.display = 'none';
+                          a.href = url;
+                          a.download = `user-activity-report.pdf`;
+                          document.body.appendChild(a);
+                          a.click();
+                          window.URL.revokeObjectURL(url);
+                          toast.success('PDF exported!');
+                        } catch (err) {
+                          toast.error('Failed to export PDF');
+                        }
+                      }}
+                    >
+                      Export PDF
+                    </Button>
                   </CardHeader>
                   <CardContent className="h-[400px]">
                     <ResponsiveContainer width="100%" height="100%">
@@ -536,6 +675,57 @@ export default function AggregatePage() {
                   <CardHeader>
                     <CardTitle>Action Types Distribution</CardTitle>
                     <CardDescription>Breakdown of system activities by action type</CardDescription>
+                    <Button
+                      className="mt-2"
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          const token = localStorage.getItem('token');
+                          const res = await fetch('http://localhost:3001/api/reports/action-types-pdf', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                              chartData: {
+                                type: 'pie',
+                                data: {
+                                  labels: chartData.activityByType.map(d => d.name),
+                                  datasets: [{
+                                    label: 'Action Count',
+                                    data: chartData.activityByType.map(d => d.value),
+                                    backgroundColor: chartData.activityByType.map((_, i) => COLORS[i % COLORS.length]),
+                                  }]
+                                },
+                                options: {
+                                  responsive: true,
+                                  plugins: { legend: { display: true } }
+                                }
+                              },
+                              summary: `Total action types: ${chartData.activityByType.length}, Most common: ${chartData.activityByType[0]?.name || 'N/A'} (${chartData.activityByType[0]?.value || 0} events)`,
+                              timeframe,
+                              actionTypesData: chartData.activityByType
+                            })
+                          });
+                          if (!res.ok) throw new Error('Failed to generate PDF');
+                          const blob = await res.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.style.display = 'none';
+                          a.href = url;
+                          a.download = `action-types-report.pdf`;
+                          document.body.appendChild(a);
+                          a.click();
+                          window.URL.revokeObjectURL(url);
+                          toast.success('PDF exported!');
+                        } catch (err) {
+                          toast.error('Failed to export PDF');
+                        }
+                      }}
+                    >
+                      Export PDF
+                    </Button>
                   </CardHeader>
                   <CardContent className="h-[400px]">
                     <ResponsiveContainer width="100%" height="100%">

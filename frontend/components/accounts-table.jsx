@@ -55,7 +55,7 @@ export function AccountsTable({ accounts, userId, onAccountChange }) {
   const [accountToEdit, setAccountToEdit] = useState(null);
   const [accountToDelete, setAccountToDelete] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [ibanValidation, setIbanValidation] = useState({ isValid: true });
+  const [ibanValidation, setIbanValidation] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     account_type: 'bank',
@@ -101,15 +101,21 @@ export function AccountsTable({ accounts, userId, onAccountChange }) {
     });
     setIbanValidation({ isValid: true });
   };
-  const handleIbanChange = (value) => {
+  const handleIbanChange = (e) => {
     setFormData({
       ...formData,
-      name: value,
+      name: e.target.value,
     });
-  }
+  };
 
   const handleAddAccount = async () => {
-    if (formData.name && !ibanValidation.isValid) {
+    // Prevent duplicate IBAN in frontend
+    const ibanExists = accounts.some(acc => acc.name === formData.name);
+    if (ibanExists) {
+      toast.error('An account with this IBAN already exists.');
+      return;
+    }
+    if (!ibanValidation || !ibanValidation.isValid) {
       toast.error('Invalid IBAN format');
       return;
     }
@@ -135,7 +141,8 @@ export function AccountsTable({ accounts, userId, onAccountChange }) {
         onAccountChange();
       } else {
         const error = await response.json();
-        toast.error(error.message || 'Failed to add account');
+        console.log('Backend error:', error); // Debug
+        toast.error(error.error || error.message || 'Failed to add account');
       }
     } catch (error) {
       console.error('Error adding account:', error);
@@ -271,10 +278,8 @@ export function AccountsTable({ accounts, userId, onAccountChange }) {
                   value={formData.name}
                   onChange={handleIbanChange}
                   onValidationChange={setIbanValidation}
-                  label="IBAN Account"
-                  placeholder="RO49 AAAA 1B31 0075 9384 0000"
                   required
-                  />
+                />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="account_type">Account Type</Label>
@@ -331,7 +336,7 @@ export function AccountsTable({ accounts, userId, onAccountChange }) {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleAddAccount} disabled={isSubmitting}>
+              <Button onClick={handleAddAccount} disabled={isSubmitting || !ibanValidation || !ibanValidation.isValid}>
                 {isSubmitting ? 'Adding...' : 'Add Account'}
               </Button>
             </DialogFooter>

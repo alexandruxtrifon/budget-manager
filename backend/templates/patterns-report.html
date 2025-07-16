@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spending Patterns Report</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: white;
+            color: #333;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #2563eb;
+            margin: 0;
+            font-size: 28px;
+        }
+        .header p {
+            color: #6b7280;
+            margin: 5px 0 0 0;
+        }
+        .report-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            padding: 15px;
+            background-color: #f8fafc;
+            border-radius: 8px;
+        }
+        .info-item {
+            text-align: center;
+        }
+        .info-label {
+            font-size: 12px;
+            color: #6b7280;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        .info-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-top: 5px;
+        }
+        .section {
+            margin-bottom: 40px;
+        }
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .chart-container {
+            margin: 20px 0;
+            page-break-inside: avoid;
+        }
+        .chart-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 10px;
+        }
+        .chart-description {
+            font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 15px;
+        }
+        .educational-content {
+            background-color: #f0f9ff;
+            border: 1px solid #0ea5e9;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .educational-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #0369a1;
+            margin-bottom: 15px;
+        }
+        .educational-text {
+            font-size: 14px;
+            color: #0c4a6e;
+            line-height: 1.6;
+        }
+        .tips-list {
+            margin-top: 15px;
+        }
+        .tips-list li {
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            text-align: center;
+            font-size: 12px;
+            color: #6b7280;
+        }
+        .page-break {
+            page-break-before: always;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Spending Patterns Analysis</h1>
+        <p>Generated on {{date}} for {{userName}}</p>
+    </div>
+
+    <div class="report-info">
+        <div class="info-item">
+            <div class="info-label">Account</div>
+            <div class="info-value">{{accountName}}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Timeframe</div>
+            <div class="info-value">{{timeframe}}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Period</div>
+            <div class="info-value">{{startDate}} - {{endDate}}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Total Spent</div>
+            <div class="info-value">{{currency}} {{summary.totalExpenses}}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Transactions</div>
+            <div class="info-value">{{summary.transactionCount}}</div>
+        </div>
+    </div>
+
+    <div class="educational-content">
+        <div class="educational-title">Understanding Your Spending Patterns</div>
+        <div class="educational-text">
+            This report analyzes your spending patterns to help you understand your financial habits. 
+            Spending patterns reveal when you spend the most money, where you shop most frequently, 
+            and your preferred shopping days. Use these insights to make better financial decisions.
+        </div>
+        <div class="tips-list">
+            <strong>Key Insights to Look For:</strong>
+            <ul>
+                <li><strong>Peak Spending Days:</strong> Days with the highest spending - often paydays, weekends, or specific events</li>
+                <li><strong>Merchant Patterns:</strong> Most visited merchants and total spent at each location</li>
+                <li><strong>Frequency vs Amount:</strong> High frequency with low amounts might indicate daily necessities</li>
+                <li><strong>Optimization Opportunities:</strong> Areas where you can consolidate purchases or find alternatives</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Weekday Spending Analysis</div>
+        <div class="chart-description">
+            This radar chart shows your spending patterns by day of the week. Peaks indicate your highest spending days, 
+            while valleys show your lowest spending days. This can help you understand weekend vs weekday patterns 
+            and the influence of paydays on your spending.
+        </div>
+        <div class="chart-container">
+            <canvas id="weekdayChart" width="400" height="300"></canvas>
+        </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <div class="section">
+        <div class="section-title">Merchant Frequency Analysis</div>
+        <div class="chart-description">
+            This chart reveals your shopping habits by showing which merchants you visit most frequently 
+            and how much you spend at each location. High frequency with low amounts might indicate daily necessities, 
+            while high amounts might suggest luxury or impulse purchases.
+        </div>
+        <div class="chart-container">
+            <canvas id="merchantChart" width="400" height="300"></canvas>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Pattern Analysis Tips</div>
+        <div class="educational-text">
+            <strong>How to Use This Information:</strong>
+        </div>
+        <div class="tips-list">
+            <ul>
+                <li><strong>Identify Peak Spending Days:</strong> Look for days with the highest spending. Are these paydays, weekends, or specific events? Understanding your peak days can help you plan better and avoid overspending.</li>
+                <li><strong>Analyze Merchant Patterns:</strong> Check which merchants you visit most frequently. High frequency with low amounts might indicate daily necessities, while high amounts might suggest luxury or impulse purchases.</li>
+                <li><strong>Optimize Your Spending:</strong> Use pattern insights to make better financial decisions. Consider consolidating purchases, finding alternatives for frequent high-cost merchants, or adjusting your shopping schedule.</li>
+                <li><strong>Compare Across Time Periods:</strong> Compare patterns across different time periods to see how your spending habits evolve and identify seasonal trends or lifestyle changes.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Report generated by Budget Manager Web | {{date}}</p>
+    </div>
+
+    <script>
+        // Wait for Chart.js to load and then render charts
+        function renderCharts() {
+            // Weekday Chart
+            const weekdayCtx = document.getElementById('weekdayChart').getContext('2d');
+            const weekdayData = JSON.parse('{{{weekdayData}}}');
+            
+            if (weekdayData && weekdayData.length > 0) {
+                new Chart(weekdayCtx, {
+                    type: 'radar',
+                    data: {
+                        labels: weekdayData.map(item => item.day),
+                        datasets: [{
+                            label: 'Amount Spent',
+                            data: weekdayData.map(item => item.amount),
+                            backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            borderWidth: 2,
+                            pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return 'Amount: {{currency}} ' + context.parsed.r.toFixed(2);
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            r: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '{{currency}} ' + value.toFixed(0);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Merchant Chart
+            const merchantCtx = document.getElementById('merchantChart').getContext('2d');
+            const merchantData = JSON.parse('{{{merchantData}}}');
+            
+            if (merchantData && merchantData.length > 0) {
+                new Chart(merchantCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: merchantData.map(item => item.name),
+                        datasets: [{
+                            label: 'Visit Count',
+                            data: merchantData.map(item => item.count),
+                            backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            borderWidth: 1
+                        }, {
+                            label: 'Total Spent',
+                            data: merchantData.map(item => item.total),
+                            backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                            borderColor: 'rgba(16, 185, 129, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y',
+                        plugins: {
+                            legend: {
+                                position: 'top'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        if (context.dataset.label === 'Total Spent') {
+                                            return 'Total Spent: {{currency}} ' + context.parsed.x.toFixed(2);
+                                        }
+                                        return context.dataset.label + ': ' + context.parsed.x;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return '{{currency}} ' + value.toFixed(0);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Try to render charts when Chart.js is available
+        if (typeof Chart !== 'undefined') {
+            renderCharts();
+        } else {
+            // Wait for Chart.js to load
+            let attempts = 0;
+            const maxAttempts = 10;
+            const checkChart = setInterval(() => {
+                attempts++;
+                if (typeof Chart !== 'undefined') {
+                    clearInterval(checkChart);
+                    renderCharts();
+                } else if (attempts >= maxAttempts) {
+                    clearInterval(checkChart);
+                    console.error('Chart.js failed to load');
+                }
+            }, 500);
+        }
+    </script>
+</body>
+</html> 

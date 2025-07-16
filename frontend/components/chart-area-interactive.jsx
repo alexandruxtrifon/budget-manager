@@ -262,7 +262,7 @@ const chartConfig = {
 //   );
 // }
 
-export function ChartAreaInteractive({ transactions = [], currency = "EUR", timeRange = "30d", onTimeRangeChange }) {
+export function ChartAreaInteractive({ transactions = [], currency = "RON", timeRange = "30d", onTimeRangeChange }) {
   const isMobile = useIsMobile()
   //const [timeRange, setTimeRange] = React.useState("90d")
 

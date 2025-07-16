@@ -135,6 +135,274 @@ module.exports = (pool) => {
     }
   });
 
+  // Add patterns-specific PDF endpoint
+  router.post('/patterns-pdf', authMiddleware, async (req, res) => {
+    try {
+      const { 
+        patternData, 
+        timeframe, 
+        accountName, 
+        currency, 
+        startDate, 
+        endDate,
+        summary 
+      } = req.body;
+      
+
+
+      await logActivity(
+        pool,
+        req.user.user_id,
+        'GENERATE_PATTERNS_REPORT',
+        'PATTERNS',
+        `${accountName} - ${timeframe} Patterns Report`,
+        {
+          timeframe,
+          startDate,
+          endDate,
+          currency,
+          ip: req.ip,
+          userAgent: req.get('User-Agent')
+        }
+      );
+
+      const templatePath = path.join(__dirname, '../templates/patterns-report.html');
+      const templateHtml = fs.readFileSync(templatePath, 'utf8');
+      
+      const template = handlebars.compile(templateHtml);
+      const html = template({
+        accountName,
+        timeframe,
+        currency,
+        startDate,
+        endDate,
+        userName: req.user.email,
+        summary,
+        date: new Date().toLocaleDateString(),
+        weekdayData: JSON.stringify(patternData.weekdayAnalysis || []),
+        merchantData: JSON.stringify(patternData.merchantFrequency || [])
+      });
+      
+      const browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+      });
+      
+      const page = await browser.newPage();
+      page.on('console', msg => console.log('Browser console:', msg.text()));
+      page.on('pageerror', error => console.error('Page error:', error.message));
+      
+      // Add Chart.js before setting content
+      await page.addScriptTag({ 
+        url: 'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js' 
+      });
+      
+      await page.setContent(html, {
+        waitUntil: 'networkidle0'
+      });
+      
+      const pdf = await page.pdf({
+        format: 'A4',
+        printBackground: true,
+        margin: {
+          top: '20px',
+          right: '20px',
+          bottom: '20px',
+          left: '20px'
+        }
+      });
+      
+      await browser.close();
+      
+      res.contentType('application/pdf');
+      res.send(pdf);
+      
+    } catch (error) {
+      console.error('Error generating patterns PDF report:', error);
+      res.status(500).json({ error: 'Failed to generate patterns PDF report' });
+      console.log(error);
+    }
+  });
+
+  // Add progression PDF endpoint
+  router.post('/progression-pdf', authMiddleware, async (req, res) => {
+    try {
+      const { 
+        progressionData, 
+        timeframe, 
+        accountName, 
+        currency, 
+        startDate, 
+        endDate,
+        summary 
+      } = req.body;
+      
+      await logActivity(
+        pool,
+        req.user.user_id,
+        'GENERATE_PROGRESSION_REPORT',
+        'PROGRESSION',
+        `${accountName} - ${timeframe} Progression Report`,
+        {
+          timeframe,
+          startDate,
+          endDate,
+          currency,
+          ip: req.ip,
+          userAgent: req.get('User-Agent')
+        }
+      );
+
+      const templatePath = path.join(__dirname, '../templates/progression-report.html');
+      const templateHtml = fs.readFileSync(templatePath, 'utf8');
+      
+      const template = handlebars.compile(templateHtml);
+      const html = template({
+        accountName,
+        timeframe,
+        currency,
+        startDate,
+        endDate,
+        userName: req.user.email,
+        summary,
+        date: new Date().toLocaleDateString(),
+        cumulativeSpending: JSON.stringify(progressionData.cumulativeSpending || []),
+        spendingStyle: {
+          ...progressionData.spendingStyle || {},
+          isFrontLoader: progressionData.spendingStyle?.type === 'Front-Loader',
+          isBackLoader: progressionData.spendingStyle?.type === 'Back-Loader'
+        },
+        weeklyVelocity: JSON.stringify(progressionData.weeklyVelocity || []),
+        highestWeek: progressionData.highestWeek || null,
+        lowestWeek: progressionData.lowestWeek || null,
+        weeklyVariance: progressionData.weeklyVariance || 0,
+        paydayImpact: JSON.stringify(progressionData.paydayImpact || []),
+        paydaySummary: progressionData.paydaySummary || {}
+      });
+      
+      const browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+      });
+      
+      const page = await browser.newPage();
+      page.on('console', msg => console.log('Browser console:', msg.text()));
+      page.on('pageerror', error => console.error('Page error:', error.message));
+      
+      // Add Chart.js before setting content
+      await page.addScriptTag({ 
+        url: 'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js' 
+      });
+      
+      await page.setContent(html, {
+        waitUntil: 'networkidle0'
+      });
+      
+      const pdf = await page.pdf({
+        format: 'A4',
+        printBackground: true,
+        margin: {
+          top: '20px',
+          right: '20px',
+          bottom: '20px',
+          left: '20px'
+        }
+      });
+      
+      await browser.close();
+      
+      res.contentType('application/pdf');
+      res.send(pdf);
+      
+    } catch (error) {
+      console.error('Error generating progression PDF report:', error);
+      res.status(500).json({ error: 'Failed to generate progression PDF report' });
+      console.log(error);
+    }
+  });
+
+  // Add anomalies PDF endpoint
+  router.post('/anomalies-pdf', authMiddleware, async (req, res) => {
+    try {
+      const { 
+        anomaliesData, 
+        timeframe, 
+        accountName, 
+        currency, 
+        startDate, 
+        endDate,
+        summary 
+      } = req.body;
+      
+      await logActivity(
+        pool,
+        req.user.user_id,
+        'GENERATE_ANOMALIES_REPORT',
+        'ANOMALIES',
+        `${accountName} - ${timeframe} Anomalies Report`,
+        {
+          timeframe,
+          startDate,
+          endDate,
+          currency,
+          ip: req.ip,
+          userAgent: req.get('User-Agent')
+        }
+      );
+
+      const templatePath = path.join(__dirname, '../templates/anomalies-report.html');
+      const templateHtml = fs.readFileSync(templatePath, 'utf8');
+      
+      const template = handlebars.compile(templateHtml);
+      const html = template({
+        accountName,
+        timeframe,
+        currency,
+        startDate,
+        endDate,
+        userName: req.user.email,
+        summary,
+        date: new Date().toLocaleDateString(),
+        anomalies: anomaliesData.anomalies || [],
+        anomaliesCount: anomaliesData.anomalies?.length || 0
+      });
+      
+      const browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+      });
+      
+      const page = await browser.newPage();
+      page.on('console', msg => console.log('Browser console:', msg.text()));
+      page.on('pageerror', error => console.error('Page error:', error.message));
+      
+      await page.setContent(html, {
+        waitUntil: 'networkidle0'
+      });
+      
+      const pdf = await page.pdf({
+        format: 'A4',
+        printBackground: true,
+        margin: {
+          top: '20px',
+          right: '20px',
+          bottom: '20px',
+          left: '20px'
+        }
+      });
+      
+      await browser.close();
+      
+      res.contentType('application/pdf');
+      res.send(pdf);
+      
+    } catch (error) {
+      console.error('Error generating anomalies PDF report:', error);
+      res.status(500).json({ error: 'Failed to generate anomalies PDF report' });
+      console.log(error);
+    }
+  });
+
   // Add this new endpoint to your reports.js file
 
 router.post('/spending-analysis', authMiddleware, async (req, res) => {
@@ -765,6 +1033,272 @@ if (currentMonthData.length === 0) {
   } catch (error) {
     console.error('Error analyzing spending progression:', error);
     res.status(500).json({ error: 'Failed to analyze spending progression' });
+  }
+});
+
+router.post('/activity-trends-pdf', authMiddleware, async (req, res) => {
+  try {
+    const { chartData, summary, timeframe, activityData } = req.body;
+    let chartJsLib;
+    try {
+      const chartJsPath = path.join(__dirname, '../templates/chart.min.js');
+      if (fs.existsSync(chartJsPath)) {
+        chartJsLib = fs.readFileSync(chartJsPath, 'utf8');
+      } else {
+        const fetch = require('node-fetch');
+        const response = await fetch('https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js');
+        chartJsLib = await response.text();
+        fs.writeFileSync(chartJsPath, chartJsLib);
+      }
+    } catch (chartError) {
+      console.error('Error obtaining Chart.js:', chartError);
+      chartJsLib = '/* Chart.js could not be loaded */';
+    }
+
+    await logActivity(
+      pool,
+      req.user.user_id,
+      'GENERATE_REPORT',
+      'ACTIVITY_TRENDS',
+      `Activity Trends - ${timeframe} Report`,
+      {
+        timeframe,
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      }
+    );
+    const templatePath = path.join(__dirname, '../templates/activity-trends-report.html');
+    const templateHtml = fs.readFileSync(templatePath, 'utf8');
+    const template = handlebars.compile(templateHtml);
+    const html = template({
+      userName: req.user.email,
+      date: new Date().toLocaleDateString(),
+      timeframe,
+      summary,
+      activityData,
+      chartJsLib,
+      activityTrendsChartData: JSON.stringify(chartData)
+    });
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+    const page = await browser.newPage();
+    page.on('console', msg => console.log('Browser console:', msg.text()));
+    page.on('pageerror', error => console.error('Page error:', error.message));
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    await page.addScriptTag({ url: 'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js' });
+    const pdf = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' }
+    });
+    await browser.close();
+    res.contentType('application/pdf');
+    res.send(pdf);
+  } catch (error) {
+    console.error('Error generating Activity Trends PDF report:', error);
+    res.status(500).json({ error: 'Failed to generate Activity Trends PDF report' });
+  }
+});
+
+router.post('/user-activity-pdf', authMiddleware, async (req, res) => {
+  try {
+    const { chartData, summary, timeframe, userActivityData, totalUsers, activeUsers } = req.body;
+    let chartJsLib;
+    try {
+      const chartJsPath = path.join(__dirname, '../templates/chart.min.js');
+      if (fs.existsSync(chartJsPath)) {
+        chartJsLib = fs.readFileSync(chartJsPath, 'utf8');
+      } else {
+        const fetch = require('node-fetch');
+        const response = await fetch('https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js');
+        chartJsLib = await response.text();
+        fs.writeFileSync(chartJsPath, chartJsLib);
+      }
+    } catch (chartError) {
+      console.error('Error obtaining Chart.js:', chartError);
+      chartJsLib = '/* Chart.js could not be loaded */';
+    }
+
+    await logActivity(
+      pool,
+      req.user.user_id,
+      'GENERATE_REPORT',
+      'USER_ACTIVITY',
+      `User Activity - ${timeframe} Report`,
+      {
+        timeframe,
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      }
+    );
+    const templatePath = path.join(__dirname, '../templates/user-activity-report.html');
+    const templateHtml = fs.readFileSync(templatePath, 'utf8');
+    const template = handlebars.compile(templateHtml);
+    const html = template({
+      userName: req.user.email,
+      date: new Date().toLocaleDateString(),
+      timeframe,
+      summary,
+      userActivityData,
+      chartJsLib,
+      userActivityChartData: JSON.stringify(chartData),
+      totalUsers,
+      activeUsers
+    });
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+    const page = await browser.newPage();
+    page.on('console', msg => console.log('Browser console:', msg.text()));
+    page.on('pageerror', error => console.error('Page error:', error.message));
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    await page.addScriptTag({ url: 'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js' });
+    const pdf = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' }
+    });
+    await browser.close();
+    res.contentType('application/pdf');
+    res.send(pdf);
+  } catch (error) {
+    console.error('Error generating User Activity PDF report:', error);
+    res.status(500).json({ error: 'Failed to generate User Activity PDF report' });
+  }
+});
+
+router.post('/action-types-pdf', authMiddleware, async (req, res) => {
+  try {
+    const { chartData, summary, timeframe, actionTypesData } = req.body;
+    let chartJsLib;
+    try {
+      const chartJsPath = path.join(__dirname, '../templates/chart.min.js');
+      if (fs.existsSync(chartJsPath)) {
+        chartJsLib = fs.readFileSync(chartJsPath, 'utf8');
+      } else {
+        const fetch = require('node-fetch');
+        const response = await fetch('https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js');
+        chartJsLib = await response.text();
+        fs.writeFileSync(chartJsPath, chartJsLib);
+      }
+    } catch (chartError) {
+      console.error('Error obtaining Chart.js:', chartError);
+      chartJsLib = '/* Chart.js could not be loaded */';
+    }
+
+    await logActivity(
+      pool,
+      req.user.user_id,
+      'GENERATE_REPORT',
+      'ACTION_TYPES',
+      `Action Types - ${timeframe} Report`,
+      {
+        timeframe,
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      }
+    );
+    const templatePath = path.join(__dirname, '../templates/action-types-report.html');
+    const templateHtml = fs.readFileSync(templatePath, 'utf8');
+    const template = handlebars.compile(templateHtml);
+    const html = template({
+      userName: req.user.email,
+      date: new Date().toLocaleDateString(),
+      timeframe,
+      summary,
+      actionTypesData,
+      chartJsLib,
+      actionTypesChartData: JSON.stringify(chartData)
+    });
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+    const page = await browser.newPage();
+    page.on('console', msg => console.log('Browser console:', msg.text()));
+    page.on('pageerror', error => console.error('Page error:', error.message));
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    await page.addScriptTag({ url: 'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js' });
+    const pdf = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' }
+    });
+    await browser.close();
+    res.contentType('application/pdf');
+    res.send(pdf);
+  } catch (error) {
+    console.error('Error generating Action Types PDF report:', error);
+    res.status(500).json({ error: 'Failed to generate Action Types PDF report' });
+  }
+});
+
+router.post('/forecast-pdf', authMiddleware, async (req, res) => {
+  try {
+    const { chartData, summary, timeframe, forecastTable } = req.body;
+    let chartJsLib;
+    try {
+      const chartJsPath = path.join(__dirname, '../templates/chart.min.js');
+      if (fs.existsSync(chartJsPath)) {
+        chartJsLib = fs.readFileSync(chartJsPath, 'utf8');
+      } else {
+        const fetch = require('node-fetch');
+        const response = await fetch('https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js');
+        chartJsLib = await response.text();
+        fs.writeFileSync(chartJsPath, chartJsLib);
+      }
+    } catch (chartError) {
+      console.error('Error obtaining Chart.js:', chartError);
+      chartJsLib = '/* Chart.js could not be loaded */';
+    }
+
+    await logActivity(
+      pool,
+      req.user.user_id,
+      'GENERATE_REPORT',
+      'FORECAST',
+      `Forecast - ${timeframe} Report`,
+      {
+        timeframe,
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      }
+    );
+    const templatePath = path.join(__dirname, '../templates/forecast-report.html');
+    const templateHtml = fs.readFileSync(templatePath, 'utf8');
+    const template = handlebars.compile(templateHtml);
+    const html = template({
+      userName: req.user.email,
+      date: new Date().toLocaleDateString(),
+      timeframe,
+      summary,
+      forecastTable,
+      chartJsLib,
+      forecastChartData: JSON.stringify(chartData)
+    });
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+    const page = await browser.newPage();
+    page.on('console', msg => console.log('Browser console:', msg.text()));
+    page.on('pageerror', error => console.error('Page error:', error.message));
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    await page.addScriptTag({ url: 'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js' });
+    const pdf = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' }
+    });
+    await browser.close();
+    res.contentType('application/pdf');
+    res.send(pdf);
+  } catch (error) {
+    console.error('Error generating Forecast PDF report:', error);
+    res.status(500).json({ error: 'Failed to generate Forecast PDF report' });
   }
 });
 

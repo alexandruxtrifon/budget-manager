@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spending Anomalies Report</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: white;
+            color: #333;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #dc2626;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #dc2626;
+            margin: 0;
+            font-size: 28px;
+        }
+        .header p {
+            color: #6b7280;
+            margin: 5px 0 0 0;
+        }
+        .report-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            padding: 15px;
+            background-color: #f8fafc;
+            border-radius: 8px;
+        }
+        .info-item {
+            text-align: center;
+        }
+        .info-label {
+            font-size: 12px;
+            color: #6b7280;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        .info-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-top: 5px;
+        }
+        .section {
+            margin-bottom: 40px;
+        }
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .educational-content {
+            background-color: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .educational-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #991b1b;
+            margin-bottom: 15px;
+        }
+        .educational-text {
+            font-size: 14px;
+            color: #7f1d1d;
+            line-height: 1.6;
+        }
+        .tips-list {
+            margin-top: 15px;
+        }
+        .tips-list li {
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            text-align: center;
+            font-size: 12px;
+            color: #6b7280;
+        }
+        .page-break {
+            page-break-before: always;
+        }
+        .anomaly-card {
+            background-color: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .anomaly-type {
+            font-weight: 600;
+            color: #92400e;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        .anomaly-date {
+            font-size: 12px;
+            color: #78350f;
+            margin-bottom: 8px;
+        }
+        .anomaly-description {
+            font-size: 14px;
+            color: #78350f;
+            margin-bottom: 8px;
+        }
+        .anomaly-amount {
+            font-size: 18px;
+            font-weight: 600;
+            color: #92400e;
+            margin-bottom: 5px;
+        }
+        .anomaly-diff {
+            font-size: 12px;
+            color: #78350f;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background-color: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 12px;
+            text-align: center;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 5px;
+        }
+        .stat-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        .no-anomalies {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6b7280;
+            font-style: italic;
+        }
+        .detection-methods {
+            background-color: #f0f9ff;
+            border: 1px solid #0ea5e9;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .detection-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #0369a1;
+            margin-bottom: 15px;
+        }
+        .detection-text {
+            font-size: 14px;
+            color: #0c4a6e;
+            line-height: 1.6;
+        }
+        .method-list {
+            margin-top: 10px;
+        }
+        .method-list li {
+            margin-bottom: 5px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Spending Anomalies Report</h1>
+        <p>Generated on {{date}} for {{userName}}</p>
+    </div>
+
+    <div class="report-info">
+        <div class="info-item">
+            <div class="info-label">Account</div>
+            <div class="info-value">{{accountName}}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Timeframe</div>
+            <div class="info-value">{{timeframe}}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Period</div>
+            <div class="info-value">{{startDate}} - {{endDate}}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Total Spent</div>
+            <div class="info-value">{{currency}} {{summary.totalExpenses}}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Anomalies Found</div>
+            <div class="info-value">{{anomaliesCount}}</div>
+        </div>
+    </div>
+
+    <div class="educational-content">
+        <div class="educational-title">Understanding Spending Anomalies</div>
+        <div class="educational-text">
+            This report identifies unusual spending patterns that stand out from your normal behavior. 
+            Anomalies can indicate important changes in your spending habits, unexpected expenses, 
+            or potential areas for financial review.
+        </div>
+        <div class="tips-list">
+            <strong>Key Insights to Look For:</strong>
+            <ul>
+                <li><strong>Large Transactions:</strong> Unusually high amounts compared to your typical spending</li>
+                <li><strong>Category Spikes:</strong> Unusual spending in specific categories</li>
+                <li><strong>Pattern Deviations:</strong> Spending that breaks from your established habits</li>
+                <li><strong>Timing Anomalies:</strong> Spending at unusual times or frequencies</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="detection-methods">
+        <div class="detection-title">How We Detect Anomalies</div>
+        <div class="detection-text">
+            Our system uses advanced algorithms to identify unusual spending patterns:
+        </div>
+        <div class="method-list">
+            <ul>
+                <li><strong>Statistical Analysis:</strong> Compares transaction amounts to your historical averages</li>
+                <li><strong>Category Analysis:</strong> Identifies unusual spending in specific categories</li>
+                <li><strong>Pattern Recognition:</strong> Detects deviations from your typical spending rhythm</li>
+                <li><strong>Threshold Monitoring:</strong> Flags transactions that exceed normal limits</li>
+            </ul>
+        </div>
+    </div>
+
+    {{#if anomalies}}
+    <div class="section">
+        <div class="section-title">Detected Anomalies</div>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Anomalies</div>
+                <div class="stat-value">{{anomaliesCount}}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Analysis Period</div>
+                <div class="stat-value">{{timeframe}}</div>
+            </div>
+        </div>
+        
+        {{#each anomalies}}
+        <div class="anomaly-card">
+            <div class="anomaly-type">{{type}}</div>
+            <div class="anomaly-date">{{date}}</div>
+            <div class="anomaly-description">{{description}}</div>
+            <div class="anomaly-amount">{{../currency}} {{amount}}</div>
+            <div class="anomaly-diff">{{percentDiff}}% {{comparedTo}}</div>
+        </div>
+        {{/each}}
+    </div>
+    {{else}}
+    <div class="section">
+        <div class="section-title">Anomaly Analysis Results</div>
+        <div class="no-anomalies">
+            <h3>No Anomalies Detected</h3>
+            <p>Great news! No unusual spending patterns were detected in this period.</p>
+            <p>This suggests your spending is consistent with your normal patterns.</p>
+        </div>
+    </div>
+    {{/if}}
+
+    <div class="page-break"></div>
+
+    <div class="section">
+        <div class="section-title">What to Do About Anomalies</div>
+        <div class="educational-text">
+            <strong>When you encounter an anomaly:</strong>
+        </div>
+        <div class="tips-list">
+            <ul>
+                <li><strong>Review Necessity:</strong> Determine if the expense was necessary or discretionary</li>
+                <li><strong>Check Budget Impact:</strong> Assess how it affects your overall financial plan</li>
+                <li><strong>Identify Patterns:</strong> Look for similar anomalies that might indicate a trend</li>
+                <li><strong>Plan for Future:</strong> Consider if this type of expense should be budgeted for</li>
+                <li><strong>Learn from Patterns:</strong> Use anomalies to understand your spending triggers</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Types of Anomalies</div>
+        <div class="educational-text">
+            <strong>Large Transaction Anomaly:</strong>
+            <p>A transaction that's significantly larger than your typical spending (more than 2x your average transaction amount). 
+            This could be a major purchase, emergency expense, or unusual payment.</p>
+            
+            <strong>Category Anomaly:</strong>
+            <p>Unusual spending in a specific category compared to your historical patterns (more than 3x your average for that category). 
+            This might indicate a new habit, one-time expense, or changing priorities.</p>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Report generated by Budget Manager Web | {{date}}</p>
+    </div>
+</body>
+</html> 

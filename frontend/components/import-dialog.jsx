@@ -97,7 +97,7 @@ console.log("accountId being sent:", selectedAccount);
       }
       
       const result = await res.json();
-      toast.success(`Successfully imported ${result.count} transactions`);
+      toast.success(`Successfully imported ${result.stats.imported} transactions`);
       
       if (onImportComplete) {
         onImportComplete();

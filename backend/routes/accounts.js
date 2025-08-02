@@ -170,56 +170,61 @@ module.exports = (pool) => {
         return res.status(403).json({ error: 'You can only delete your own accounts' });
       }
       
+      const result = await pool.query(
+        'SELECT name, account_type, currency, current_balance FROM accounts WHERE account_id = $1', [account_id]);
+      const accountToDelete = result.rows[0];
+      console.log('Account to delete:', accountToDelete);
+      
+      // Get transaction count for logging
       const transactionsCheck = await pool.query(
         'SELECT COUNT(*) FROM transactions WHERE account_id = $1',
         [account_id]
       );
-      const result = await pool.query(
-        'SELECT name FROM accounts WHERE account_id = $1', [account_id]);
-        const accountToDelete = result.rows[0];
-        console.log('Account to delete:', accountToDelete);
-      if (parseInt(transactionsCheck.rows[0].count) > 0) {
+      const transactionCount = parseInt(transactionsCheck.rows[0].count);
+      
+      // Begin transaction to ensure data consistency
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        
+        // Delete all transactions for this account first
+        if (transactionCount > 0) {
+          await client.query('DELETE FROM transactions WHERE account_id = $1', [account_id]);
+          console.log(`Deleted ${transactionCount} transactions for account ${account_id}`);
+        }
+        
+        // Delete the account
+        await client.query('DELETE FROM accounts WHERE account_id = $1', [account_id]);
+        
+        await client.query('COMMIT');
+        
         await logActivity(
           pool, 
           req.user.user_id, 
-          //`DELETE_ACCOUNT_FAILED|${accountToDelete.name}|${account_id}`, 
-          'DELETE_ACCOUNT_FAILED',
+          'DELETE_ACCOUNT',
           'ACCOUNT', 
           accountToDelete.name, 
           {
             user_email: req.user.email,
-            account_id: account_id,
-            reason: 'has_transactions',
-            transaction_count: parseInt(transactionsCheck.rows[0].count),
+            deleted_account_id: account_id,
+            deleted_account_type: accountToDelete.account_type,
+            deleted_account_currency: accountToDelete.currency,
+            final_balance: accountToDelete.current_balance,
+            deleted_transactions_count: transactionCount,
             ip: req.ip,
             userAgent: req.get('User-Agent')
           }
         );
-
-        return res.status(400).json({ 
-          error: 'Cannot delete account with transactions. Move or delete the transactions first.' 
+        
+        res.json({ 
+          message: `Account deleted successfully${transactionCount > 0 ? ` along with ${transactionCount} transactions` : ''}` 
         });
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      } finally {
+        client.release();
       }
-      
-      await pool.query('DELETE FROM accounts WHERE account_id = $1', [account_id]);
-      await logActivity(
-        pool, 
-        req.user.user_id, 
-        //`DELETE_ACCOUNT|${accountToDelete.name}|${account_id}`, 
-        'DELETE_ACCOUNT',
-        'ACCOUNT', 
-        accountToDelete.name, 
-        {
-          user_email: req.user.email,
-          deleted_account_id: account_id,
-          deleted_account_type: accountToDelete.account_type,
-          deleted_account_currency: accountToDelete.currency,
-          final_balance: accountToDelete.current_balance,
-          ip: req.ip,
-          userAgent: req.get('User-Agent')
-        }
-      );
-      res.json({ message: 'Account deleted successfully' });
     } catch (err) {
       console.error('Error deleting account:', err);
       res.status(500).json({ error: 'Failed to delete account' });

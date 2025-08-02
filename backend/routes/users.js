@@ -41,36 +41,90 @@ module.exports = (pool) => {
   router.post('/register', async (req, res) => {
     const { email, password, full_name } = req.body;
     try {
-      const hashedPassword = await bcrypt.hash(password, 10);
+      // First, check if user already exists
+      const existingUser = await pool.query(
+        `SELECT user_id, email, full_name, is_verified, otp_expiry FROM users WHERE email = $1`,
+        [email]
+      );
 
+      if (existingUser.rows.length > 0) {
+        const user = existingUser.rows[0];
+        
+        // If user is already verified, prevent re-registration
+        if (user.is_verified) {
+          return res.status(400).json({ 
+            error: 'Email already exists and is verified. Please log in instead.',
+            code: 'EMAIL_ALREADY_VERIFIED'
+          });
+        }
+        
+        // If user exists but is not verified, check if OTP has expired
+        if (user.otp_expiry && user.otp_expiry > new Date()) {
+          return res.status(400).json({ 
+            error: 'Email already exists but not verified. Please wait for the verification code to expire or check your email for the verification code.',
+            code: 'EMAIL_EXISTS_UNVERIFIED',
+            otp_expiry: user.otp_expiry
+          });
+        }
+        
+        // OTP has expired, allow re-registration by updating the existing user
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const otp = crypto.randomInt(100000, 999999).toString();
+        const otpExpiry = new Date();
+        otpExpiry.setMinutes(otpExpiry.getMinutes() + OTP_MINUTES);
+        
+        // Update existing user with new password and OTP
+        const result = await pool.query(
+          `UPDATE users 
+           SET password_hash = $1, full_name = $2, otp = $3, otp_expiry = $4, updated_at = NOW()
+           WHERE user_id = $5 
+           RETURNING user_id, email, full_name`,
+          [hashedPassword, full_name, otp, otpExpiry, user.user_id]
+        );
+        
+        // Create notification for sending OTP email
+        const notificationResult = await pool.query(
+          `INSERT INTO notifications (user_id, type, payload, is_sent)
+          VALUES ($1, $2, $3, $4) RETURNING notification_id`,
+          [
+            user.user_id, 
+            'otp_email', 
+            JSON.stringify({
+              email: email,
+              name: full_name,
+              otp: otp,
+              timestamp: new Date()
+            }), 
+            false
+          ]
+        );
+
+        await logActivity(pool, user.user_id, 'RE_REGISTER', 'USER', email, {
+          full_name,
+          reason: 'otp_expired',
+          ip: req.ip,
+          userAgent: req.get('User-Agent')
+        });
+        
+        res.status(200).json({
+          ...result.rows[0],
+          notification_id: notificationResult.rows[0].notification_id,
+          message: 'Registration updated successfully. Please check your email for the new verification code.'
+        });
+        return;
+      }
+
+      // New user registration (existing logic)
+      const hashedPassword = await bcrypt.hash(password, 10);
       const otp = crypto.randomInt(100000, 999999).toString();
       const otpExpiry = new Date();
-      otpExpiry.setMinutes(otpExpiry.getMinutes() + OTP_MINUTES); // OTP valid for 2
+      otpExpiry.setMinutes(otpExpiry.getMinutes() + OTP_MINUTES);
 
-      // const result = await pool.query(
-      //   `INSERT INTO users (email, password_hash, full_name)
-      //    VALUES ($1, $2, $3) RETURNING user_id, email, full_name`,
-      //   [email, hashedPassword, full_name]
-      // );
       const result = await pool.query(
-      `INSERT INTO users (email, password_hash, full_name, otp, otp_expiry, is_verified)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING user_id, email, full_name`,
-      [email, hashedPassword, full_name, otp, otpExpiry, false]
-    );
-      // const notificationResult = await pool.query(
-      //   `INSERT INTO notifications (user_id, type, payload, is_sent)
-      //   VALUES ($1, $2, $3, $4) RETURNING notification_id`,
-      //   [
-      //     result.rows[0].user_id, 
-      //     'welcome_email', 
-      //     JSON.stringify({
-      //       email: email,
-      //       name: full_name,
-      //       timestamp: new Date()
-      //     }), 
-      //     false
-      //   ]
-      // );
+        `INSERT INTO users (email, password_hash, full_name, otp, otp_expiry, is_verified)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING user_id, email, full_name`,
+        [email, hashedPassword, full_name, otp, otpExpiry, false]
+      );
 
       const notificationResult = await pool.query(
         `INSERT INTO notifications (user_id, type, payload, is_sent)
@@ -89,10 +143,11 @@ module.exports = (pool) => {
       );
 
       await logActivity(pool, result.rows[0].user_id, 'REGISTER', 'USER', email, {
-      full_name,
-      ip: req.ip,
-      userAgent: req.get('User-Agent')
-    });
+        full_name,
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+      
       res.status(201).json({
         ...result.rows[0],
         notification_id: notificationResult.rows[0].notification_id
@@ -100,9 +155,9 @@ module.exports = (pool) => {
     } catch (err) {
       console.error(err);
       if (err.code === '23505') {
-        res.status(400).send({error: 'Email already exists'});
+        res.status(400).json({error: 'Email already exists'});
       } else {
-        res.status(500).send('Error registering user');
+        res.status(500).json({error: 'Error registering user'});
       }
     }
   });
@@ -207,6 +262,66 @@ module.exports = (pool) => {
     } catch (err) {
       console.error('Error resending OTP:', err);
       res.status(500).json({ error: 'Failed to resend OTP' });
+    }
+  });
+
+  // Admin route to manually verify a user (for testing purposes)
+  router.post('/verify-user/:userId', authMiddleware, adminMiddleware, async (req, res) => {
+    const { userId } = req.params;
+    
+    try {
+      const result = await pool.query(
+        `UPDATE users SET is_verified = true WHERE user_id = $1 RETURNING user_id, email, full_name`,
+        [userId]
+      );
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      await logActivity(pool, req.user.user_id, 'MANUAL_VERIFY_USER', 'ADMIN', result.rows[0].email, {
+        verified_user_id: userId,
+        verified_user_email: result.rows[0].email,
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+      
+      res.json({ 
+        message: 'User verified successfully',
+        user: result.rows[0]
+      });
+    } catch (err) {
+      console.error('Error verifying user:', err);
+      res.status(500).json({ error: 'Failed to verify user' });
+    }
+  });
+
+  // Route to check user verification status
+  router.get('/verification-status/:email', async (req, res) => {
+    const { email } = req.params;
+    
+    try {
+      const result = await pool.query(
+        `SELECT user_id, email, is_verified, otp_expiry FROM users WHERE email = $1`,
+        [email]
+      );
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      const user = result.rows[0];
+      const canReRegister = !user.is_verified && (!user.otp_expiry || user.otp_expiry <= new Date());
+      
+      res.json({ 
+        is_verified: user.is_verified,
+        user_id: user.user_id,
+        can_re_register: canReRegister,
+        otp_expiry: user.otp_expiry
+      });
+    } catch (err) {
+      console.error('Error checking verification status:', err);
+      res.status(500).json({ error: 'Failed to check verification status' });
     }
   });
 

@@ -110,16 +110,31 @@ export function LoginForm() {
     } else {
       const errorText = await res.text();
       let errorMessage = "Login failed. Please try again.";
+      let errorCode = null;
+      
       try {
         const errorObject = JSON.parse(errorText);
         if (errorObject && errorObject.error) {
           errorMessage = errorObject.error;
+          errorCode = errorObject.code;
         }
       } catch (parseError) {
         console.error("Failed to parse error response as JSON:", parseError);
         if (errorText) errorMessage = errorText;
       }
-      toast.error("Login Failed", { description: errorMessage });
+      
+              if (errorCode === 'ACCOUNT_NOT_VERIFIED') {
+          toast.error("Account Not Verified", { 
+            description: "Please check your email and verify your account before logging in. If you didn't receive a verification email or the code has expired, you can register again with the same email.",
+            duration: 8000,
+            action: {
+              label: "Register Again",
+              onClick: () => router.push("/register")
+            }
+          });
+        } else {
+        toast.error("Login Failed", { description: errorMessage });
+      }
     }
   } catch (error) {
       console.error("Login request failed:", error)
@@ -153,11 +168,9 @@ export function LoginForm() {
           }
           
         }
-          // Move to sending email animation
           setCurrentStep(2)
           api?.scrollTo(2)
           
-          // After 3 seconds, move to OTP verification
           setTimeout(() => {
             setCurrentStep(3)
             api?.scrollTo(3)
@@ -193,7 +206,6 @@ export function LoginForm() {
         toast.success("OTP verified successfully!")
         setResetToken(data.reset_token)
         
-        // Move to password reset screen
         setCurrentStep(4)
         api?.scrollTo(4)
       } else {

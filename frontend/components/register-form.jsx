@@ -258,17 +258,20 @@ export function RegisterForm() {
       const data = await res.json()
       
       if (res.ok) {
-        toast.success("Account created! Please check your email for OTP")
+        // Check if this is a new registration (201) or re-registration (200)
+        const isReRegistration = res.status === 200
+        const successMessage = isReRegistration 
+          ? (data.message || "Account updated! Please check your email for the new OTP")
+          : "Account created! Please check your email for OTP"
+        
+        toast.success(successMessage)
         setUserId(data.user_id)
         
         if (data.notification_id) {
           localStorage.setItem('notification_id', data.notification_id);
         }
 
-
-
         // Move to the email sent confirmation step
-        //setCarouselIndex(1)
         if (api) {
           api.scrollTo(1)
           setCurrentStep(1)
@@ -281,10 +284,31 @@ export function RegisterForm() {
         }
       } else {
         let errorMessage = "Registration failed"
+        let errorCode = null
+        
         if (data.error) {
           errorMessage = data.error
+          errorCode = data.code
         }
-        toast.error(errorMessage)
+        
+        if (errorCode === 'EMAIL_ALREADY_VERIFIED') {
+          toast.error("Account Already Exists", {
+            description: "This email is already registered and verified. Please log in instead.",
+            duration: 5000,
+            action: {
+              label: "Go to Login",
+              onClick: () => router.push("/login")
+            }
+          })
+        } else if (errorCode === 'EMAIL_EXISTS_UNVERIFIED') {
+          const expiryTime = data.otp_expiry ? new Date(data.otp_expiry).toLocaleTimeString() : 'soon'
+          toast.error("Account Not Verified", {
+            description: `This email is registered but not verified. Please wait for the verification code to expire (${expiryTime}) or check your email for the verification code.`,
+            duration: 8000
+          })
+        } else {
+          toast.error("Registration Failed", { description: errorMessage })
+        }
       }
     } catch (error) {
       console.error("Registration error:", error)

@@ -11,12 +11,10 @@ router.post('/login', async (req, res) => {
 
   try {
     const result = await pool.query(
-      `SELECT user_id, email, full_name, password_hash, role FROM users WHERE email = $1`,
+      `SELECT user_id, email, full_name, password_hash, role, is_verified FROM users WHERE email = $1`,
       [email]
     );
 
-    //const user = result.rows[0];
-    //if (!user) return res.status(400).json({ error: 'Invalid email or password' });
     if (result.rows.length === 0) {
       // Log failed login attempt (no user found)
       await logActivity(pool, null, 'LOGIN_FAILED_EMAIL', 'USER', email, { 
@@ -28,15 +26,29 @@ router.post('/login', async (req, res) => {
     }
 
     const user = result.rows[0];
+    
+    // Check if user account is verified
+    if (!user.is_verified) {
+      await logActivity(pool, user.user_id, 'LOGIN_FAILED_UNVERIFIED', 'USER', user.email, { 
+        reason: 'account_not_verified',
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+      return res.status(403).json({ 
+        error: 'Account not verified. Please check your email and verify your account before logging in.',
+        code: 'ACCOUNT_NOT_VERIFIED'
+      });
+    }
+    
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
-      if (!isValidPassword) {
-        await logActivity(pool, user.user_id, 'LOGIN_FAILED_PASS', 'USER', user.email, { 
-          reason: 'invalid_password',
-          ip: req.ip,
-          userAgent: req.get('User-Agent')
-        });
-        return res.status(400).json({ error: 'Invalid email or password' });
-      }
+    if (!isValidPassword) {
+      await logActivity(pool, user.user_id, 'LOGIN_FAILED_PASS', 'USER', user.email, { 
+        reason: 'invalid_password',
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+      return res.status(400).json({ error: 'Invalid email or password' });
+    }
     const token = jwt.sign(
       {
         user_id: user.user_id,

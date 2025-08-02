@@ -210,7 +210,7 @@ export default function TransactionsPage() {
       <AppSidebar user={user} onUserUpdate={handleUserUpdate} variant="inset" />
       <SidebarInset>
         <SiteHeader />
-        <div className="flex flex-1 flex-col p-6">
+        <div className="flex flex-1 flex-col p-6 bg-red-500">
           <div className="flex flex-col gap-6">
             <div className="flex items-center justify-between">
               <div>
